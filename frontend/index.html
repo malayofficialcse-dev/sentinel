@@ -14,8 +14,27 @@
     
     <!-- Material Symbols -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    
+    <!-- Theme initialisation script -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('sentinel_theme');
+          var isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches) || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+            document.documentElement.setAttribute('data-theme', 'dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
+            document.documentElement.setAttribute('data-theme', 'light');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="h-full bg-[#F5F5F5] text-[#242424] font-sans antialiased selection:bg-[#0078D4] selection:text-white">
+  <body class="h-full bg-[var(--bg-app,#F5F5F5)] text-[var(--text-primary,#242424)] font-sans antialiased selection:bg-[#0078D4] selection:text-white dark:bg-[#121214] dark:text-[#F3F2F1]">
     <div id="root" class="h-full min-h-screen flex flex-col"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

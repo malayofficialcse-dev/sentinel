@@ -8,7 +8,7 @@ export const InvestigatorLayout: React.FC = () => {
   const { sidebarCollapsed } = useUIStore();
 
   return (
-    <div className="h-screen w-screen flex bg-[#F5F5F5] text-[#242424] overflow-hidden font-sans">
+    <div className="h-screen w-screen flex bg-[var(--bg-app)] text-[var(--text-primary)] overflow-hidden font-sans transition-colors">
       {/* Sidebar Navigation */}
       <Sidebar />
 
@@ -22,7 +22,7 @@ export const InvestigatorLayout: React.FC = () => {
         <TopNav />
 
         {/* Dynamic Workspace Route View */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-[#F5F5F5]">
+        <main className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-app)]">
           <Outlet />
         </main>
       </div>

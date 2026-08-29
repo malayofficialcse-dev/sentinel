@@ -105,36 +105,30 @@ export const GraphViewer: React.FC<GraphViewerProps> = ({
   };
 
   return (
-    <div className="flex-1 bg-[#FAFAFA] relative overflow-hidden flex flex-col h-full w-full select-none">
-      {/* Canvas Toolbar matching Screen 3 */}
-      <div className="absolute top-4 left-4 bg-white border border-[#E1DFDD] rounded-[4px] flex items-center p-1 shadow-xs z-20 gap-1">
+    <div className="flex-1 bg-[var(--bg-app)] relative overflow-hidden flex flex-col h-full w-full select-none transition-colors">
+      {/* Canvas Toolbar */}
+      <div className="absolute top-4 left-4 bg-[var(--surface)] border border-[var(--border)] rounded-[4px] flex items-center p-1 shadow-md z-20 gap-1">
         <button
           onClick={() => setZoomLevel((z) => Math.min(1.5, z + 0.1))}
-          className="p-1 rounded-[4px] hover:bg-[#F3F2F1] text-[#605E5C] hover:text-[#242424]"
+          className="p-1 rounded-[4px] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
           title="Zoom In"
         >
           <span className="material-symbols-outlined text-[18px]">zoom_in</span>
         </button>
         <button
           onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.1))}
-          className="p-1 rounded-[4px] hover:bg-[#F3F2F1] text-[#605E5C] hover:text-[#242424]"
+          className="p-1 rounded-[4px] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
           title="Zoom Out"
         >
           <span className="material-symbols-outlined text-[18px]">zoom_out</span>
         </button>
-        <div className="w-px h-4 bg-[#E1DFDD] mx-1" />
+        <div className="w-px h-4 bg-[var(--border)] mx-1" />
         <button
           onClick={() => setZoomLevel(1)}
-          className="p-1 rounded-[4px] hover:bg-[#F3F2F1] text-[#605E5C] hover:text-[#242424]"
+          className="p-1 rounded-[4px] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
           title="Reset View"
         >
           <span className="material-symbols-outlined text-[18px]">center_focus_strong</span>
-        </button>
-        <button
-          className="p-1 rounded-[4px] hover:bg-[#F3F2F1] text-[#605E5C] hover:text-[#242424]"
-          title="Filter Nodes"
-        >
-          <span className="material-symbols-outlined text-[18px]">filter_alt</span>
         </button>
       </div>
 
@@ -143,23 +137,23 @@ export const GraphViewer: React.FC<GraphViewerProps> = ({
         className="flex-1 relative overflow-auto bg-grid-pattern h-full w-full"
         style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }}
       >
-        {/* SVG Connector Lines matching Screen 3 */}
+        {/* SVG Connector Lines */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 min-w-[1000px] min-h-[600px]">
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#C8C6C4" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--border-strong, #8A8886)" />
             </marker>
             <marker id="arrow-red" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#D13438" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--danger, #D13438)" />
             </marker>
           </defs>
 
           {/* Victim to UPI */}
-          <line x1="250" y1="200" x2="380" y2="185" stroke="#C8C6C4" strokeWidth="2" strokeDasharray="4" markerEnd="url(#arrow)" />
+          <line x1="250" y1="200" x2="380" y2="185" stroke="var(--border-strong, #8A8886)" strokeWidth="2" strokeDasharray="4" markerEnd="url(#arrow)" />
           {/* UPI to Mule */}
-          <line x1="495" y1="235" x2="570" y2="330" stroke="#D13438" strokeWidth="2" markerEnd="url(#arrow-red)" />
+          <line x1="495" y1="235" x2="570" y2="330" stroke="var(--danger, #D13438)" strokeWidth="2" markerEnd="url(#arrow-red)" />
           {/* Mule to Bank */}
-          <line x1="710" y1="380" x2="760" y2="380" stroke="#C8C6C4" strokeWidth="2" markerEnd="url(#arrow)" />
+          <line x1="710" y1="380" x2="760" y2="380" stroke="var(--border-strong, #8A8886)" strokeWidth="2" markerEnd="url(#arrow)" />
         </svg>
 
         {/* Nodes */}
@@ -170,45 +164,45 @@ export const GraphViewer: React.FC<GraphViewerProps> = ({
               key={node.id}
               onClick={() => handleNodeClick(node)}
               style={{ top: `${node.y}px`, left: `${node.x}px`, width: `${node.width}px` }}
-              className={`absolute bg-white rounded-[4px] p-3 flex flex-col gap-1 z-10 shadow-xs cursor-pointer transition-all duration-150 ${
+              className={`absolute bg-[var(--surface)] rounded-[4px] p-3 flex flex-col gap-1 z-10 shadow-sm cursor-pointer transition-all duration-150 ${
                 isSelected
-                  ? 'border-2 border-[#0078D4] ring-3 ring-[#0078D4]/20 shadow-md'
+                  ? 'border-2 border-[var(--primary)] ring-3 ring-[var(--primary)]/20 shadow-md'
                   : node.isHighRisk
-                    ? 'border border-[#D13438] hover:shadow-md'
-                    : 'border border-[#E1DFDD] hover:border-[#0078D4] hover:shadow-sm'
+                    ? 'border border-[var(--danger-border)] hover:shadow-md'
+                    : 'border border-[var(--border)] hover:border-[var(--primary)] hover:shadow-sm'
               }`}
             >
               <div
                 className={`flex items-center justify-between border-b pb-1.5 ${
-                  node.isHighRisk ? 'border-[#FDE7E9]' : 'border-[#E1DFDD]'
+                  node.isHighRisk ? 'border-[var(--danger-border)]' : 'border-[var(--border)]'
                 }`}
               >
                 <div className="flex items-center gap-1.5 overflow-hidden">
                   <span
                     className={`material-symbols-outlined p-1 rounded-[4px] text-[16px] ${
-                      node.isHighRisk ? 'bg-[#FDE7E9] text-[#D13438]' : 'bg-[#EFF6FC] text-[#0078D4]'
+                      node.isHighRisk ? 'bg-[var(--danger-bg)] text-[var(--danger)]' : 'bg-[var(--info-bg)] text-[var(--primary)]'
                     }`}
                   >
                     {node.icon}
                   </span>
                   <span
                     className={`text-[12px] font-bold truncate ${
-                      node.isHighRisk ? 'text-[#D13438]' : 'text-[#242424]'
+                      node.isHighRisk ? 'text-[var(--danger)]' : 'text-[var(--text-primary)]'
                     }`}
                   >
                     {node.title}
                   </span>
                 </div>
                 {node.riskScore >= 80 && (
-                  <span className="text-[10px] font-bold text-[#D13438] bg-[#FDE7E9] px-1 rounded-[4px]">
+                  <span className="text-[10px] font-bold text-[var(--danger)] bg-[var(--danger-bg)] px-1 rounded-[4px]">
                     {node.riskScore}%
                   </span>
                 )}
               </div>
 
-              <div className="flex flex-col gap-0.5 mt-1 text-[11px] text-[#605E5C]">
+              <div className="flex flex-col gap-0.5 mt-1 text-[11px] text-[var(--text-secondary)]">
                 <span className="truncate">{node.subtitle}</span>
-                <span className="truncate font-semibold text-[#242424]">{node.meta}</span>
+                <span className="truncate font-semibold text-[var(--text-primary)]">{node.meta}</span>
               </div>
             </div>
           );

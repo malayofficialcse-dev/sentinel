@@ -22,7 +22,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'inline-flex items-center justify-center font-medium transition-colors duration-150 rounded-[4px] focus:outline-none focus:ring-1 focus:ring-[#0078D4] disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer';
+    'inline-flex items-center justify-center font-medium transition-colors duration-150 rounded-[4px] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer';
 
   const sizeStyles = {
     sm: 'text-[12px] px-2.5 py-1 gap-1.5 h-7',
@@ -31,11 +31,11 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const variantStyles = {
-    primary: 'bg-[#0078D4] text-white hover:bg-[#106EBE] active:bg-[#005A9E] border border-transparent',
-    secondary: 'bg-white text-[#242424] border border-[#C8C6C4] hover:bg-[#F3F2F1] active:bg-[#EDEBE9]',
-    outline: 'bg-transparent text-[#242424] border border-[#E1DFDD] hover:bg-[#F3F2F1] active:bg-[#EDEBE9]',
-    danger: 'bg-[#D13438] text-white hover:bg-[#A4262C] active:bg-[#791E23] border border-transparent',
-    ghost: 'bg-transparent text-[#605E5C] hover:bg-[#F3F2F1] hover:text-[#242424] active:bg-[#EDEBE9] border border-transparent',
+    primary: 'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] active:bg-[var(--primary-dark)] border border-transparent shadow-xs',
+    secondary: 'bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border-strong)] hover:bg-[var(--surface-hover)] active:bg-[var(--surface-selected)] shadow-xs',
+    outline: 'bg-transparent text-[var(--text-primary)] border border-[var(--border)] hover:bg-[var(--surface-hover)] active:bg-[var(--surface-selected)]',
+    danger: 'bg-[var(--danger)] text-white hover:opacity-90 active:opacity-80 border border-transparent shadow-xs',
+    ghost: 'bg-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] active:bg-[var(--surface-selected)] border border-transparent',
   };
 
   return (

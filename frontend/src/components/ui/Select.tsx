@@ -21,9 +21,9 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="w-full flex flex-col gap-1 text-left">
         {label && (
-          <label htmlFor={selectId} className="text-[12px] font-semibold text-[#323130]">
+          <label htmlFor={selectId} className="text-[12px] font-semibold text-[var(--text-body)]">
             {label}
-            {props.required && <span className="text-[#D13438] ml-0.5">*</span>}
+            {props.required && <span className="text-[var(--danger)] ml-0.5">*</span>}
           </label>
         )}
         <select
@@ -31,23 +31,23 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           id={selectId}
           className={twMerge(
             clsx(
-              'w-full h-8 px-3 text-[13px] bg-white text-[#242424] border rounded-[4px] transition-colors focus:outline-none focus:border-[#0078D4] focus:ring-1 focus:ring-[#0078D4] disabled:bg-[#F3F2F1]',
-              error ? 'border-[#D13438]' : 'border-[#E1DFDD]',
+              'w-full h-8 px-3 text-[13px] bg-[var(--surface)] text-[var(--text-primary)] border rounded-[4px] transition-colors focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] disabled:bg-[var(--surface-hover)]',
+              error ? 'border-[var(--danger)]' : 'border-[var(--border)]',
               className
             )
           )}
           {...props}
         >
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <option key={opt.value} value={opt.value} className="bg-[var(--surface)] text-[var(--text-primary)]">
               {opt.label}
             </option>
           ))}
         </select>
         {error ? (
-          <span className="text-[11px] text-[#D13438]">{error}</span>
+          <span className="text-[11px] text-[var(--danger)]">{error}</span>
         ) : helperText ? (
-          <span className="text-[11px] text-[#605E5C]">{helperText}</span>
+          <span className="text-[11px] text-[var(--text-secondary)]">{helperText}</span>
         ) : null}
       </div>
     );

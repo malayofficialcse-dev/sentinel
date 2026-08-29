@@ -17,14 +17,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full flex flex-col gap-1 text-left">
         {label && (
-          <label htmlFor={inputId} className="text-[12px] font-semibold text-[#323130]">
+          <label htmlFor={inputId} className="text-[12px] font-semibold text-[var(--text-body)]">
             {label}
-            {props.required && <span className="text-[#D13438] ml-0.5">*</span>}
+            {props.required && <span className="text-[var(--danger)] ml-0.5">*</span>}
           </label>
         )}
         <div className="relative flex items-center w-full">
           {leftIcon && (
-            <div className="absolute left-2.5 text-[#8A8886] flex items-center pointer-events-none">
+            <div className="absolute left-2.5 text-[var(--text-muted)] flex items-center pointer-events-none">
               {leftIcon}
             </div>
           )}
@@ -33,25 +33,25 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             className={twMerge(
               clsx(
-                'w-full h-8 text-[13px] bg-white text-[#242424] placeholder-[#8A8886] border rounded-[4px] transition-colors focus:outline-none focus:border-[#0078D4] focus:ring-1 focus:ring-[#0078D4] disabled:bg-[#F3F2F1] disabled:text-[#A19F9D]',
+                'w-full h-8 text-[13px] bg-[var(--surface)] text-[var(--text-primary)] placeholder-[var(--text-muted)] border rounded-[4px] transition-colors focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] disabled:bg-[var(--surface-hover)] disabled:text-[var(--text-muted)]',
                 leftIcon ? 'pl-8' : 'pl-3',
                 rightIcon ? 'pr-8' : 'pr-3',
-                error ? 'border-[#D13438] focus:border-[#D13438] focus:ring-[#D13438]' : 'border-[#E1DFDD]',
+                error ? 'border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]' : 'border-[var(--border)]',
                 className
               )
             )}
             {...props}
           />
           {rightIcon && (
-            <div className="absolute right-2.5 text-[#8A8886] flex items-center">
+            <div className="absolute right-2.5 text-[var(--text-muted)] flex items-center">
               {rightIcon}
             </div>
           )}
         </div>
         {error ? (
-          <span className="text-[11px] text-[#D13438]">{error}</span>
+          <span className="text-[11px] text-[var(--danger)]">{error}</span>
         ) : helperText ? (
-          <span className="text-[11px] text-[#605E5C]">{helperText}</span>
+          <span className="text-[11px] text-[var(--text-secondary)]">{helperText}</span>
         ) : null}
       </div>
     );

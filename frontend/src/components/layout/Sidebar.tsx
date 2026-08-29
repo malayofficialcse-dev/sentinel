@@ -35,26 +35,26 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-full bg-[#FFFFFF] border-r border-[#E1DFDD] flex flex-col z-40 transition-all duration-200 ${
+      className={`fixed left-0 top-0 h-full bg-[var(--surface)] border-r border-[var(--border)] flex flex-col z-40 transition-all duration-200 ${
         sidebarCollapsed ? 'w-16' : 'w-60'
       }`}
     >
       {/* Brand Header */}
-      <div className="px-4 h-16 border-b border-[#E1DFDD] flex items-center justify-between">
+      <div className="px-4 h-16 border-b border-[var(--border)] flex items-center justify-between">
         <NavLink to="/investigator" className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-8 h-8 rounded-[4px] bg-[#0078D4] text-white flex items-center justify-center font-bold text-sm shrink-0">
+          <div className="w-8 h-8 rounded-[4px] bg-[var(--primary)] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
             <span className="material-symbols-outlined text-[20px] fill-1 text-white">shield</span>
           </div>
           {!sidebarCollapsed && (
-            <div className="flex flex-col truncate">
-              <span className="font-bold text-[15px] text-[#242424] tracking-tight leading-none">SENTINEL</span>
-              <span className="text-[10px] text-[#605E5C] uppercase tracking-wider font-semibold mt-1">Investigation</span>
+            <div className="flex flex-col truncate text-left">
+              <span className="font-bold text-[15px] text-[var(--text-primary)] tracking-tight leading-none">SENTINEL</span>
+              <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider font-semibold mt-1">Investigation</span>
             </div>
           )}
         </NavLink>
         <button
           onClick={toggleSidebar}
-          className="text-[#605E5C] hover:text-[#242424] p-1 rounded-[4px] hover:bg-[#F3F2F1] transition-colors"
+          className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-1 rounded-[4px] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <span className="material-symbols-outlined text-[18px]">
@@ -73,8 +73,8 @@ export const Sidebar: React.FC = () => {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-[4px] text-[13px] font-medium transition-colors select-none group relative ${
                 isActive
-                  ? 'bg-[#E8F1FB] text-[#005A9E] font-semibold border-l-3 border-[#0078D4]'
-                  : 'text-[#605E5C] hover:bg-[#F3F2F1] hover:text-[#242424]'
+                  ? 'bg-[var(--surface-selected)] text-[var(--primary)] font-semibold border-l-3 border-[var(--primary)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
               }`
             }
           >
@@ -82,7 +82,7 @@ export const Sidebar: React.FC = () => {
               <>
                 <span
                   className={`material-symbols-outlined text-[20px] shrink-0 ${
-                    isActive ? 'text-[#0078D4] fill-1' : 'text-[#605E5C] group-hover:text-[#242424]'
+                    isActive ? 'text-[var(--primary)] fill-1' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {item.icon}
@@ -91,7 +91,7 @@ export const Sidebar: React.FC = () => {
                 {!sidebarCollapsed && item.badge && (
                   <span
                     className={`ml-auto text-[10px] px-1.5 py-0.2 rounded-[4px] font-bold ${
-                      isActive ? 'bg-[#0078D4] text-white' : 'bg-[#EDEBE9] text-[#605E5C]'
+                      isActive ? 'bg-[var(--primary)] text-white' : 'bg-[var(--surface-hover)] text-[var(--text-secondary)]'
                     }`}
                   >
                     {item.badge}
@@ -104,7 +104,7 @@ export const Sidebar: React.FC = () => {
 
         {role === UserRole.ADMIN && (
           <>
-            <div className="my-2 border-t border-[#E1DFDD]" />
+            <div className="my-2 border-t border-[var(--border)]" />
             {adminNavItems.map((item) => (
               <NavLink
                 key={item.path}
@@ -112,12 +112,12 @@ export const Sidebar: React.FC = () => {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2 rounded-[4px] text-[13px] font-medium transition-colors select-none group ${
                     isActive
-                      ? 'bg-[#E8F1FB] text-[#005A9E] font-semibold border-l-3 border-[#0078D4]'
-                      : 'text-[#605E5C] hover:bg-[#F3F2F1] hover:text-[#242424]'
+                      ? 'bg-[var(--surface-selected)] text-[var(--primary)] font-semibold border-l-3 border-[var(--primary)]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
                   }`
                 }
               >
-                <span className="material-symbols-outlined text-[20px] shrink-0 text-[#605E5C] group-hover:text-[#242424]">
+                <span className="material-symbols-outlined text-[20px] shrink-0 text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
                   {item.icon}
                 </span>
                 {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
@@ -128,17 +128,17 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* Footer Navigation */}
-      <div className="p-2 border-t border-[#E1DFDD] space-y-0.5">
+      <div className="p-2 border-t border-[var(--border)] space-y-0.5">
         <NavLink
           to="/investigator/help"
-          className="flex items-center gap-3 px-3 py-1.5 rounded-[4px] text-[12px] text-[#605E5C] hover:bg-[#F3F2F1] hover:text-[#242424]"
+          className="flex items-center gap-3 px-3 py-1.5 rounded-[4px] text-[12px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
         >
           <span className="material-symbols-outlined text-[18px]">help_outline</span>
           {!sidebarCollapsed && <span>Help Center</span>}
         </NavLink>
         <NavLink
           to="/investigator/status"
-          className="flex items-center gap-3 px-3 py-1.5 rounded-[4px] text-[12px] text-[#605E5C] hover:bg-[#F3F2F1] hover:text-[#242424]"
+          className="flex items-center gap-3 px-3 py-1.5 rounded-[4px] text-[12px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
         >
           <span className="material-symbols-outlined text-[18px]">signal_cellular_alt</span>
           {!sidebarCollapsed && <span>System Status</span>}

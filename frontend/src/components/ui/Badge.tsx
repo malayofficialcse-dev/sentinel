@@ -22,12 +22,12 @@ export const Badge: React.FC<BadgeProps> = ({
   };
 
   const variantStyles = {
-    default: 'bg-[#F3F2F1] text-[#323130] border border-[#E1DFDD]',
-    success: 'bg-[#F1FAF1] text-[#107C10] border border-[#A7D7A7]',
-    warning: 'bg-[#FFF4CE] text-[#CA5010] border border-[#F4C7A1]',
-    danger: 'bg-[#FDE7E9] text-[#D13438] border border-[#E6A6AA]',
-    info: 'bg-[#EFF6FC] text-[#0078D4] border border-[#B4D6F0]',
-    neutral: 'bg-[#FAFAFA] text-[#605E5C] border border-[#E1DFDD]',
+    default: 'bg-[var(--surface-hover)] text-[var(--text-primary)] border border-[var(--border)]',
+    success: 'bg-[var(--success-bg)] text-[var(--success)] border border-[var(--success-border)]',
+    warning: 'bg-[var(--warning-bg)] text-[var(--warning)] border border-[var(--warning-border)]',
+    danger: 'bg-[var(--danger-bg)] text-[var(--danger)] border border-[var(--danger-border)]',
+    info: 'bg-[var(--info-bg)] text-[var(--info)] border border-[var(--info-border)]',
+    neutral: 'bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)]',
   };
 
   return (
@@ -53,7 +53,7 @@ export const SeverityBadge: React.FC<{ severity: Severity; size?: 'sm' | 'md' }>
   switch (severity) {
     case Severity.CRITICAL:
       return (
-        <Badge variant="danger" size={size} className="bg-[#A4262C] text-white border-transparent">
+        <Badge variant="danger" size={size} className="bg-[var(--danger)] text-white border-transparent">
           <span className="material-symbols-outlined text-[12px]">error</span>
           CRITICAL
         </Badge>

@@ -1,27 +1,28 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 export const ReporterLayout: React.FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] text-[#242424] flex flex-col">
-      {/* TopNavBar matching Screen 2 */}
-      <header className="bg-white border-b border-[#E1DFDD] flex justify-between items-center w-full px-6 h-16 z-50 sticky top-0">
+    <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-primary)] flex flex-col transition-colors">
+      {/* TopNavBar */}
+      <header className="bg-[var(--surface)] border-b border-[var(--border)] flex justify-between items-center w-full px-6 h-16 z-50 sticky top-0 transition-colors">
         <div className="flex items-center gap-6">
           <NavLink to="/reporter" className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#0078D4] fill-1 text-[22px]">shield</span>
-            <span className="text-[16px] font-bold text-[#242424] tracking-tight">SENTINEL</span>
+            <span className="material-symbols-outlined text-[var(--primary)] fill-1 text-[22px]">shield</span>
+            <span className="text-[16px] font-bold text-[var(--text-primary)] tracking-tight">SENTINEL</span>
           </NavLink>
-          <nav className="hidden md:flex gap-4 ml-6 border-l border-[#E1DFDD] pl-6 h-8 items-center text-[13px] font-medium">
+          <nav className="hidden md:flex gap-4 ml-6 border-l border-[var(--border)] pl-6 h-8 items-center text-[13px] font-medium">
             <NavLink
               to="/reporter"
               end
               className={({ isActive }) =>
                 `h-16 flex items-center px-2 transition-colors border-b-2 ${
-                  isActive ? 'text-[#0078D4] border-[#0078D4] font-semibold' : 'text-[#605E5C] border-transparent hover:text-[#242424]'
+                  isActive ? 'text-[var(--primary)] border-[var(--primary)] font-semibold' : 'text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)]'
                 }`
               }
             >
@@ -31,7 +32,7 @@ export const ReporterLayout: React.FC = () => {
               to="/report"
               className={({ isActive }) =>
                 `h-16 flex items-center px-2 transition-colors border-b-2 ${
-                  isActive ? 'text-[#0078D4] border-[#0078D4] font-semibold' : 'text-[#605E5C] border-transparent hover:text-[#242424]'
+                  isActive ? 'text-[var(--primary)] border-[var(--primary)] font-semibold' : 'text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)]'
                 }`
               }
             >
@@ -41,7 +42,7 @@ export const ReporterLayout: React.FC = () => {
               to="/reports"
               className={({ isActive }) =>
                 `h-16 flex items-center px-2 transition-colors border-b-2 ${
-                  isActive ? 'text-[#0078D4] border-[#0078D4] font-semibold' : 'text-[#605E5C] border-transparent hover:text-[#242424]'
+                  isActive ? 'text-[var(--primary)] border-[var(--primary)] font-semibold' : 'text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)]'
                 }`
               }
             >
@@ -51,17 +52,20 @@ export const ReporterLayout: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Day / Night Theme Toggle */}
+          <ThemeToggle />
+
           <button
             onClick={() => navigate('/investigator')}
-            className="text-[12px] text-[#0078D4] hover:underline font-medium px-2 py-1 bg-[#EFF6FC] border border-[#B4D6F0] rounded-[4px]"
+            className="text-[12px] text-[var(--primary)] hover:underline font-medium px-2.5 py-1 bg-[var(--info-bg)] border border-[var(--info-border)] rounded-[4px] cursor-pointer"
           >
             Investigator Portal →
           </button>
-          <div className="w-8 h-8 rounded-[4px] bg-[#F3F2F1] border border-[#E1DFDD] overflow-hidden flex items-center justify-center">
+          <div className="w-8 h-8 rounded-[4px] bg-[var(--surface-secondary)] border border-[var(--border)] overflow-hidden flex items-center justify-center">
             {user?.avatar ? (
               <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
             ) : (
-              <span className="material-symbols-outlined text-[#605E5C] text-[18px]">person</span>
+              <span className="material-symbols-outlined text-[var(--text-secondary)] text-[18px]">person</span>
             )}
           </div>
           <button
@@ -69,7 +73,7 @@ export const ReporterLayout: React.FC = () => {
               logout();
               navigate('/login');
             }}
-            className="text-[#8A8886] hover:text-[#D13438] p-1"
+            className="text-[var(--text-muted)] hover:text-[var(--danger)] p-1 cursor-pointer transition-colors"
             title="Sign out"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
@@ -83,7 +87,7 @@ export const ReporterLayout: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="w-full bg-white border-t border-[#E1DFDD] py-4 px-6 text-center text-[11px] text-[#605E5C] mt-auto">
+      <footer className="w-full bg-[var(--surface)] border-t border-[var(--border)] py-4 px-6 text-center text-[11px] text-[var(--text-secondary)] mt-auto transition-colors">
         <span>🔒 Your evidence is processed with strict cryptographic verification and confidential handling.</span>
       </footer>
     </div>

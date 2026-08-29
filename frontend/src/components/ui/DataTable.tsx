@@ -58,22 +58,22 @@ export function DataTable<T>({
   const paginatedData = processedData.slice(startIndex, startIndex + pageSize);
 
   return (
-    <div className="w-full bg-white border border-[#E1DFDD] rounded-[4px] overflow-hidden flex flex-col">
+    <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-[4px] overflow-hidden flex flex-col shadow-xs">
       <div className="overflow-x-auto w-full">
         <table className="w-full text-left border-collapse min-w-full">
           <thead>
-            <tr className="bg-[#FAFAFA] border-b border-[#E1DFDD] text-[#605E5C] text-[11px] font-semibold uppercase tracking-wider">
+            <tr className="bg-[var(--surface-secondary)] border-b border-[var(--border)] text-[var(--text-secondary)] text-[11px] font-semibold uppercase tracking-wider">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   style={{ width: col.width }}
-                  className={`px-4 py-2.5 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'} ${col.sortable ? 'cursor-pointer select-none hover:text-[#242424]' : ''}`}
+                  className={`px-4 py-2.5 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'} ${col.sortable ? 'cursor-pointer select-none hover:text-[var(--text-primary)]' : ''}`}
                   onClick={() => col.sortable && handleSort(col.key)}
                 >
                   <div className={`inline-flex items-center gap-1 ${col.align === 'right' ? 'justify-end' : ''}`}>
                     <span>{col.header}</span>
                     {col.sortable && (
-                      <span className="material-symbols-outlined text-[14px] text-[#8A8886]">
+                      <span className="material-symbols-outlined text-[14px] text-[var(--text-muted)]">
                         {sortField === col.key
                           ? sortDirection === 'asc'
                             ? 'arrow_upward'
@@ -86,21 +86,21 @@ export function DataTable<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E1DFDD] text-[13px] text-[#242424]">
+          <tbody className="divide-y divide-[var(--border)] text-[13px] text-[var(--text-primary)]">
             {isLoading ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-[#8A8886]">
+                <td colSpan={columns.length} className="px-4 py-8 text-center text-[var(--text-muted)]">
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-2xl animate-spin text-[#0078D4]">progress_activity</span>
+                    <span className="material-symbols-outlined text-2xl animate-spin text-[var(--primary)]">progress_activity</span>
                     <span className="text-[12px]">Loading records...</span>
                   </div>
                 </td>
               </tr>
             ) : paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-[#8A8886]">
+                <td colSpan={columns.length} className="px-4 py-8 text-center text-[var(--text-muted)]">
                   <div className="flex flex-col items-center justify-center gap-1">
-                    <span className="material-symbols-outlined text-3xl text-[#C8C6C4]">inbox</span>
+                    <span className="material-symbols-outlined text-3xl text-[var(--border-strong)]">inbox</span>
                     <span className="text-[13px]">{emptyMessage}</span>
                   </div>
                 </td>
@@ -110,7 +110,7 @@ export function DataTable<T>({
                 <tr
                   key={String(item[keyField])}
                   onClick={() => onRowClick && onRowClick(item)}
-                  className={`transition-colors ${onRowClick ? 'hover:bg-[#F3F2F1] cursor-pointer' : 'hover:bg-[#FAFAFA]'}`}
+                  className={`transition-colors ${onRowClick ? 'hover:bg-[var(--surface-hover)] cursor-pointer' : 'hover:bg-[var(--surface-secondary)]'}`}
                 >
                   {columns.map((col) => (
                     <td
@@ -128,7 +128,7 @@ export function DataTable<T>({
       </div>
       {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="px-4 py-2 border-t border-[#E1DFDD] bg-[#FAFAFA] flex items-center justify-between text-[12px] text-[#605E5C]">
+        <div className="px-4 py-2 border-t border-[var(--border)] bg-[var(--surface-secondary)] flex items-center justify-between text-[12px] text-[var(--text-secondary)]">
           <span>
             Showing {startIndex + 1} to {Math.min(startIndex + pageSize, data.length)} of {data.length} entries
           </span>
@@ -141,7 +141,7 @@ export function DataTable<T>({
             >
               Previous
             </Button>
-            <span className="px-2 font-medium">
+            <span className="px-2 font-medium text-[var(--text-primary)]">
               Page {currentPage} of {totalPages}
             </span>
             <Button

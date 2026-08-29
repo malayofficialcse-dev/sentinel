@@ -22,21 +22,21 @@ export const Card: React.FC<CardProps> = ({
     <div
       className={twMerge(
         clsx(
-          'bg-white border border-[#E1DFDD] rounded-[4px] overflow-hidden transition-colors',
-          isClickable && 'hover:border-[#0078D4] hover:bg-[#FAFAFA] cursor-pointer',
+          'bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] rounded-[4px] overflow-hidden transition-colors shadow-xs',
+          isClickable && 'hover:border-[var(--primary)] hover:bg-[var(--surface-hover)] cursor-pointer',
           className
         )
       )}
       {...props}
     >
       {(header || headerAction) && (
-        <div className="px-4 py-3 border-b border-[#E1DFDD] bg-[#FAFAFA] flex items-center justify-between">
-          <div className="font-semibold text-[14px] text-[#242424]">{header}</div>
+        <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-secondary)] flex items-center justify-between">
+          <div className="font-semibold text-[14px] text-[var(--text-primary)]">{header}</div>
           {headerAction && <div>{headerAction}</div>}
         </div>
       )}
       <div className="p-4">{children}</div>
-      {footer && <div className="px-4 py-2.5 border-t border-[#E1DFDD] bg-[#FAFAFA]">{footer}</div>}
+      {footer && <div className="px-4 py-2.5 border-t border-[var(--border)] bg-[var(--surface-secondary)]">{footer}</div>}
     </div>
   );
 };

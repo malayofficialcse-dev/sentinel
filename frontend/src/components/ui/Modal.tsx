@@ -45,29 +45,29 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 transition-opacity"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
         onClick={onClose}
       />
       {/* Dialog container */}
       <div
-        className={`relative w-full ${maxWidthStyles[maxWidth]} bg-white border border-[#C8C6C4] rounded-[4px] shadow-lg flex flex-col max-h-[90vh] z-10`}
+        className={`relative w-full ${maxWidthStyles[maxWidth]} bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border-strong)] rounded-[4px] shadow-2xl flex flex-col max-h-[90vh] z-10`}
       >
-        <div className="px-4 py-3 border-b border-[#E1DFDD] bg-[#FAFAFA] flex items-center justify-between">
-          <h3 className="font-semibold text-[15px] text-[#242424]">{title}</h3>
+        <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-secondary)] flex items-center justify-between">
+          <h3 className="font-semibold text-[15px] text-[var(--text-primary)]">{title}</h3>
           <button
             onClick={onClose}
-            className="text-[#605E5C] hover:text-[#242424] p-1 rounded-[4px] hover:bg-[#EDEBE9] transition-colors"
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-1 rounded-[4px] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
         <div className="p-4 overflow-y-auto flex-1">{children}</div>
         {footer ? (
-          <div className="px-4 py-3 border-t border-[#E1DFDD] bg-[#FAFAFA] flex justify-end gap-2">
+          <div className="px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-secondary)] flex justify-end gap-2">
             {footer}
           </div>
         ) : (
-          <div className="px-4 py-3 border-t border-[#E1DFDD] bg-[#FAFAFA] flex justify-end">
+          <div className="px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-secondary)] flex justify-end">
             <Button variant="secondary" size="md" onClick={onClose}>
               Close
             </Button>

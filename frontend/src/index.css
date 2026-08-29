@@ -2,6 +2,7 @@
 
 @layer base {
   :root {
+    /* Day Mode / Light Theme Palette */
     --bg-app: #F5F5F5;
     --surface: #FFFFFF;
     --surface-secondary: #FAFAFA;
@@ -35,6 +36,49 @@
     --info: #0078D4;
     --info-bg: #EFF6FC;
     --info-border: #B4D6F0;
+
+    --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+    --popover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark, [data-theme='dark'] {
+    /* Night Mode / Dark Theme Palette - Sleek Fluent Dark */
+    --bg-app: #121214;
+    --surface: #1E1E22;
+    --surface-secondary: #25252A;
+    --surface-hover: #2E2E35;
+    --surface-selected: #1B385C;
+    
+    --primary: #2886DE;
+    --primary-hover: #4EA3E8;
+    --primary-dark: #1E6CB0;
+    
+    --text-primary: #F3F2F1;
+    --text-body: #E1DFDD;
+    --text-secondary: #A19F9D;
+    --text-muted: #797775;
+    
+    --border: #2D2D34;
+    --border-strong: #40404C;
+    
+    --success: #36B37E;
+    --success-bg: #0E291B;
+    --success-border: #1B5C37;
+    
+    --warning: #F5A623;
+    --warning-bg: #2E1F0A;
+    --warning-border: #633E0E;
+    
+    --danger: #FF5630;
+    --danger-bg: #2E1114;
+    --danger-border: #6B1C22;
+    
+    --info: #2886DE;
+    --info-bg: #0F2338;
+    --info-border: #184775;
+
+    --card-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.4);
+    --popover-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.6);
   }
 
   body {
@@ -42,6 +86,7 @@
     color: var(--text-primary);
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   /* Strict 4px radius standard */
@@ -82,21 +127,79 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #C8C6C4;
+  background: var(--border-strong, #C8C6C4);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #8A8886;
+  background: var(--text-secondary, #8A8886);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #40404C;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #606070;
 }
 
 /* Graph container background grid pattern */
 .bg-grid-pattern {
-  background-image: radial-gradient(#E1DFDD 1px, transparent 1px);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
 .bg-dot-pattern {
-  background-image: radial-gradient(#C8C6C4 1px, transparent 1px);
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+/* Theme utility mappings for smooth dark/light transitions */
+.dark body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+}
+
+.dark .bg-white {
+  background-color: var(--surface);
+}
+
+.dark .bg-\[\#FAFAFA\],
+.dark .bg-\[\#F5F5F5\],
+.dark .bg-\[\#F3F2F1\] {
+  background-color: var(--surface-secondary);
+}
+
+.dark .hover\:bg-\[\#FAFAFA\]:hover,
+.dark .hover\:bg-\[\#F3F2F1\]:hover {
+  background-color: var(--surface-hover);
+}
+
+.dark .border-\[\#E1DFDD\],
+.dark .border-\[\#C8C6C4\] {
+  border-color: var(--border);
+}
+
+.dark .divide-\[\#E1DFDD\] > :not([hidden]) ~ :not([hidden]),
+.dark .divide-\[\#E1DFDD\] {
+  border-color: var(--border);
+}
+
+.dark .text-\[\#242424\],
+.dark .text-\[\#323130\] {
+  color: var(--text-primary);
+}
+
+.dark .text-\[\#605E5C\] {
+  color: var(--text-secondary);
+}
+
+.dark .text-\[\#8A8886\] {
+  color: var(--text-muted);
+}
+
+.dark .bg-\[\#EFF6FC\],
+.dark .bg-\[\#E8F1FB\] {
+  background-color: var(--surface-selected);
+}
+
