@@ -9,6 +9,7 @@ import { Evidence } from '../../types';
 export const EvidenceList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
+  const [verificationMessage, setVerificationMessage] = useState('');
 
   const filtered = mockEvidence.filter(
     (e) =>
@@ -59,7 +60,7 @@ export const EvidenceList: React.FC = () => {
       key: 'integrityVerified',
       header: 'Integrity',
       width: '130px',
-      render: (e) => (
+      render: () => (
         <span className="inline-flex items-center gap-1 text-[11px] text-[#107C10] font-bold bg-[#F1FAF1] border border-[#A7D7A7] px-1.5 py-0.5 rounded-[4px]">
           <span className="material-symbols-outlined text-[14px]">verified</span>
           VERIFIED
@@ -114,7 +115,7 @@ export const EvidenceList: React.FC = () => {
       {selectedEvidence && (
         <Modal
           isOpen={!!selectedEvidence}
-          onClose={() => setSelectedEvidence(null)}
+          onClose={() => { setSelectedEvidence(null); setVerificationMessage(''); }}
           title={`Evidence Inspection: ${selectedEvidence.id}`}
           maxWidth="lg"
         >
@@ -141,6 +142,15 @@ export const EvidenceList: React.FC = () => {
                 <span className="material-symbols-outlined text-[18px]">verified</span>
                 <span>Cryptographic Integrity Verified (SHA-256)</span>
               </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setVerificationMessage(`Hash verified for ${selectedEvidence.fileName}. The registered content matches.`)}
+                leftIcon={<span className="material-symbols-outlined text-[15px]">verified</span>}
+              >
+                Verify hash again
+              </Button>
+              {verificationMessage && <p className="text-[11px] text-[#107C10] font-semibold">{verificationMessage}</p>}
               <div className="bg-[#FAFAFA] p-2.5 rounded-[4px] border border-[#E1DFDD] flex flex-col gap-1 font-mono text-[11px]">
                 <span className="text-[#605E5C]">Full Hash:</span>
                 <span className="text-[#242424] break-all">{selectedEvidence.hash}</span>

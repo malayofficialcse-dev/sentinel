@@ -1,0 +1,106 @@
+# Sentinel — Phishing URL Detection
+
+## Dataset
+PhiUSIIL Phishing URL Dataset
+
+## Objective
+Train a machine learning model capable of classifying URLs as:
+
+- 0 → Phishing
+- 1 → Legitimate
+
+## Pipeline
+
+Dataset
+    ↓
+Data Validation
+    ↓
+Exploratory Data Analysis
+    ↓
+Data Cleaning
+    ↓
+Feature Selection
+    ↓
+Train/Test Split
+    ↓
+Logistic Regression
+    ↓
+Random Forest
+    ↓
+XGBoost
+    ↓
+Model Evaluation
+    ↓
+Best Model
+    ↓
+Model Artifact
+
+
+
+
+
+
+
+
+
+                  PHIUSIIL DATASET
+                         │
+                         ▼
+              ┌────────────────────┐
+              │ data_loader.py     │
+              └─────────┬──────────┘
+                        │
+                        ▼
+                  DATAFRAME
+                        │
+                        ▼
+               DATA VALIDATION
+                        │
+             ┌──────────┼──────────┐
+             ▼          ▼          ▼
+          Missing    Duplicate   Types
+             │          │          │
+             └──────────┼──────────┘
+                        ▼
+                FEATURE SELECTION
+                        │
+                        ▼
+                   CLEAN DATA
+                        │
+                        ▼
+                TRAIN / TEST SPLIT
+                    80% / 20%
+                        │
+            ┌───────────┼────────────┐
+            ▼           ▼            ▼
+        Logistic    Random       XGBoost
+        Regression  Forest
+            │           │            │
+            └───────────┼────────────┘
+                        ▼
+                 MODEL EVALUATION
+                        │
+          ┌─────────────┼──────────────┐
+          ▼             ▼              ▼
+       Confusion       ROC            PR
+        Matrix        Curve          Curve
+          │             │              │
+          └─────────────┼──────────────┘
+                        ▼
+                MODEL COMPARISON
+                        │
+                        ▼
+                  BEST MODEL
+                        │
+                        ▼
+               models/phishing/
+                        │
+              ┌─────────┼─────────┐
+              ▼         ▼         ▼
+            Model    Features   Metrics
+              │
+              ▼
+          Sentinel API
+              │
+              ▼
+          Frontend UI

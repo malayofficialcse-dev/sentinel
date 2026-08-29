@@ -122,13 +122,15 @@ export const TopNav: React.FC = () => {
         </div>
 
         {/* Settings Icon */}
-        <button
-          onClick={() => navigate('/admin/settings')}
-          className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] rounded-[4px] transition-colors cursor-pointer"
-          title="Settings"
-        >
-          <span className="material-symbols-outlined text-[20px]">settings</span>
-        </button>
+        {role === UserRole.ADMIN && (
+          <button
+            onClick={() => navigate('/admin/settings')}
+            className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] rounded-[4px] transition-colors cursor-pointer"
+            title="Settings"
+          >
+            <span className="material-symbols-outlined text-[20px]">settings</span>
+          </button>
+        )}
 
         <div className="h-5 w-px bg-[var(--border)] mx-1" />
 

@@ -31,6 +31,8 @@ import { AIAgents } from '../pages/investigator/AIAgents';
 import { Findings } from '../pages/investigator/Findings';
 import { Reports } from '../pages/investigator/Reports';
 import { AuditLogs } from '../pages/investigator/AuditLogs';
+import { HelpCenter } from '../pages/investigator/HelpCenter';
+import { SystemStatus } from '../pages/investigator/SystemStatus';
 
 // Admin Pages
 import { UserManagement } from '../pages/admin/UserManagement';
@@ -88,6 +90,8 @@ export const router = createBrowserRouter([
       { path: 'findings', element: <Findings /> },
       { path: 'reports', element: <Reports /> },
       { path: 'audit', element: <AuditLogs /> },
+      { path: 'help', element: <HelpCenter /> },
+      { path: 'status', element: <SystemStatus /> },
     ],
   },
 
