@@ -1,38 +1,35 @@
 {
-  "url": "https://chatgpt.com/c/6a9122c5-e88c-83e8-b2a0-76ec8a524144",
-  "final_url": "https://chatgpt.com/c/6a9122c5-e88c-83e8-b2a0-76ec8a524144",
+  "url": "https://example.com/login",
+  "final_url": "https://example.com/login",
   "prediction": "PHISHING",
-  "ml_phishing_score": 100.0,
-  "evidence_score": 8,
-  "risk_score": 54.0,
-  "risk_level": "REVIEW",
-  "decision": "MODEL-EVIDENCE MISMATCH",
-  "model_evidence_mismatch": true,
+  "phishing_probability": 100.0,
+  "risk_score": 100.0,
+  "risk_level": "HIGH",
   "page_fetched": false,
   "http_status": null,
   "title": "",
   "features": {
-    "URLLength": 58.0,
+    "URLLength": 25.0,
     "DomainLength": 11.0,
     "IsDomainIP": 0.0,
-    "URLSimilarityIndex": 34.48275862068966,
-    "CharContinuationRate": 0.6842105263157895,
+    "URLSimilarityIndex": 66.66666666666666,
+    "CharContinuationRate": 0.6666666666666666,
     "TLDLegitimateProb": 0.6111288803596496,
-    "URLCharProb": 0.030576874999439202,
+    "URLCharProb": 0.04581828010357161,
     "TLDLength": 3.0,
     "NoOfSubDomain": 0.0,
     "HasObfuscation": 0.0,
     "NoOfObfuscatedChar": 0.0,
     "ObfuscationRatio": 0.0,
-    "NoOfLettersInURL": 26.0,
-    "LetterRatioInURL": 0.4482758620689655,
-    "NoOfDegitsInURL": 22.0,
-    "DegitRatioInURL": 0.3793103448275862,
+    "NoOfLettersInURL": 20.0,
+    "LetterRatioInURL": 0.8,
+    "NoOfDegitsInURL": 0.0,
+    "DegitRatioInURL": 0.0,
     "NoOfEqualsInURL": 0.0,
     "NoOfQMarkInURL": 0.0,
     "NoOfAmpersandInURL": 0.0,
     "NoOfOtherSpecialCharsInURL": 0.0,
-    "SpacialCharRatioInURL": 0.1724137931034483,
+    "SpacialCharRatioInURL": 0.2,
     "IsHTTPS": 1.0,
     "LineOfCode": 0.0,
     "LargestLineLength": 0.0,
@@ -40,7 +37,7 @@
     "DomainTitleMatchScore": 0.0,
     "URLTitleMatchScore": 0.0,
     "HasFavicon": 0.0,
-    "Robots": 1.0,
+    "Robots": 0.0,
     "IsResponsive": 0.0,
     "NoOfURLRedirect": 0.0,
     "NoOfSelfRedirect": 0.0,
@@ -66,31 +63,15 @@
   "reasons": [
     {
       "severity": "MEDIUM",
-      "reason": "High number of digits in URL",
-      "feature": "NoOfDegitsInURL",
-      "value": 22.0,
-      "points": 8
-    },
-    {
-      "severity": "MEDIUM",
-      "reason": "High digit frequency (22 digits)",
-      "feature": "NoOfDegitsInURL",
-      "value": 22.0
+      "reason": "Security-sensitive words detected in URL",
+      "feature": "security_keywords",
+      "value": 1
     },
     {
       "severity": "INFO",
       "reason": "Live page analysis was unavailable; result is primarily URL-based",
       "feature": "page_fetched",
       "value": 0
-    }
-  ],
-  "evidence": [
-    {
-      "severity": "MEDIUM",
-      "reason": "High number of digits in URL",
-      "feature": "NoOfDegitsInURL",
-      "value": 22.0,
-      "points": 8
     }
   ]
 }
