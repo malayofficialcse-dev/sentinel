@@ -44,6 +44,10 @@ jspm_packages/
 # Dataset files (often large and not suitable for Git)
 *.csv
 
+# Local malware datasets and trained model artifacts
+ai/datasets/malware/
+ai/models/malware/*.pkl
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 
