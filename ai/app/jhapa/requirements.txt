@@ -1,0 +1,20 @@
+# Core data manipulation and visualization
+numpy
+pandas
+matplotlib
+seaborn
+
+# Machine Learning & Deep Learning
+scikit-learn
+xgboost
+tensorflow
+
+# Web scraping, parsing and network requests
+requests
+beautifulsoup4
+lxml
+python-whois
+
+# Jupyter notebook support
+ipykernel
+notebook
