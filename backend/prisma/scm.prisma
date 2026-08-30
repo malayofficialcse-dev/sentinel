@@ -1,0 +1,322 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  INVESTIGATOR
+  ANALYST
+  REVIEWER
+  USER
+}
+
+enum CaseStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+enum EvidenceType {
+  IMAGE
+  PDF
+  TEXT
+  TRANSACTION
+  MANUAL
+  OTHER
+}
+
+enum EvidenceStatus {
+  UPLOADED
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum EntityType {
+  PERSON
+  PHONE
+  EMAIL
+  UPI
+  ACCOUNT
+  CARD
+  WALLET
+  DOMAIN
+  URL
+  IP
+  TRANSACTION
+  ORGANIZATION
+  DEVICE
+}
+
+enum FindingSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+
+  role         UserRole @default(USER)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cases        Case[]   @relation("CaseOwner")
+  auditLogs    AuditLog[]
+}
+
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+
+  tokenHash String   @unique
+
+  userId    String
+  user      User     @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Case {
+  id          String     @id @default(uuid())
+  caseNumber  String     @unique
+
+  title       String
+  description String?
+  status      CaseStatus @default(OPEN)
+
+  ownerId     String
+  owner       User       @relation(
+    "CaseOwner",
+    fields: [ownerId],
+    references: [id]
+  )
+
+  evidence    Evidence[]
+  entities    CaseEntity[]
+  findings    Finding[]
+  riskScores  RiskScore[]
+  reports     Report[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Evidence {
+  id              String         @id @default(uuid())
+
+  caseId          String
+  case            Case           @relation(
+    fields: [caseId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  type            EvidenceType
+  status          EvidenceStatus @default(UPLOADED)
+
+  fileName        String?
+  mimeType        String?
+  storageKey      String?
+
+  originalText    String?
+
+  sha256          String         @unique
+
+  extractedData   Json?
+  metadata        Json?
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Entity {
+  id             String     @id @default(uuid())
+
+  type           EntityType
+  canonicalValue String
+
+  normalizedValue String
+
+  confidence     Float?
+
+  metadata       Json?
+
+  cases          CaseEntity[]
+  relationships  Relationship[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([type, normalizedValue])
+}
+
+model CaseEntity {
+  id       String @id @default(uuid())
+
+  caseId   String
+  entityId String
+
+  case     Case   @relation(
+    fields: [caseId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  entity   Entity @relation(
+    fields: [entityId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  sourceEvidenceId String?
+
+  confidence Float?
+
+  createdAt DateTime @default(now())
+
+  @@unique([caseId, entityId])
+}
+
+model Relationship {
+  id          String @id @default(uuid())
+
+  sourceEntityId String
+  targetEntityId String
+
+  relationshipType String
+
+  confidence Float?
+
+  metadata Json?
+
+  sourceEntity Entity @relation(
+    fields: [sourceEntityId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  targetEntity Entity @relation(
+    fields: [targetEntityId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  createdAt DateTime @default(now())
+
+  @@index([sourceEntityId])
+  @@index([targetEntityId])
+}
+
+model Finding {
+  id       String @id @default(uuid())
+
+  caseId   String
+  case     Case   @relation(
+    fields: [caseId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  category String
+  title    String
+  description String
+
+  severity FindingSeverity
+
+  confidence Float?
+
+  evidenceIds String[]
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+}
+
+model RiskScore {
+  id      String @id @default(uuid())
+
+  caseId  String
+  case    Case @relation(
+    fields: [caseId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  score       Float
+  level       String
+
+  explanation Json?
+
+  modelVersion String?
+
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id      String @id @default(uuid())
+
+  caseId  String
+  case    Case @relation(
+    fields: [caseId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  title   String
+  content String
+
+  format  String @default("markdown")
+
+  sha256  String?
+
+  blockchainTxHash String?
+  blockchainVerified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String @id @default(uuid())
+
+  userId    String?
+  user      User? @relation(
+    fields: [userId],
+    references: [id]
+  )
+
+  action    String
+  resource  String
+  resourceId String?
+
+  metadata Json?
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([resource])
+}
