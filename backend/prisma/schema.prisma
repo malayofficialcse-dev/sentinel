@@ -1,0 +1,279 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  ADMIN
+  INVESTIGATOR
+  ANALYST
+  VIEWER
+}
+enum CaseStatus {
+  OPEN
+  INVESTIGATING
+  UNDER_REVIEW
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+enum EvidenceStatus {
+  UPLOADED
+  PROCESSING
+  ANALYZED
+  VERIFIED
+  FAILED
+}
+enum EvidenceType {
+  IMAGE
+  PDF
+  TEXT
+  CHAT
+  MANUAL
+  URL
+}
+enum ResolutionStatus {
+  MATCH
+  NEW_ENTITY
+  REVIEW
+}
+enum FindingSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+enum FindingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  MODIFIED
+  NEEDS_REVIEW
+}
+enum ReportStatus {
+  PROCESSING
+  COMPLETE
+  FAILED
+}
+
+model User {
+  id           String         @id @default(uuid()) @db.Uuid
+  email        String         @unique
+  name         String
+  passwordHash String
+  role         RoleName       @default(VIEWER)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  cases        Case[]         @relation("CaseAssignee")
+  reports      Report[]
+  refreshTokens RefreshToken[]
+  auditLogs    AuditLog[]
+}
+
+model Case {
+  id            String         @id @default(uuid()) @db.Uuid
+  title         String
+  description   String?
+  status        CaseStatus     @default(OPEN)
+  severity      FindingSeverity @default(MEDIUM)
+  assignedToId  String?        @db.Uuid
+  assignedTo    User?          @relation("CaseAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  evidence      Evidence[]
+  entities      Entity[]
+  relationships Relationship[]
+  transactions  Transaction[]
+  investigations Investigation[]
+  findings      Finding[]
+  riskScores    RiskScore[]
+  reports       Report[]
+  @@index([status, severity])
+  @@index([assignedToId])
+}
+
+model Evidence {
+  id          String           @id @default(uuid()) @db.Uuid
+  caseId      String           @db.Uuid
+  case        Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  type        EvidenceType
+  fileName    String
+  storageKey  String
+  mimeType    String
+  sizeBytes   BigInt
+  sha256      String
+  status      EvidenceStatus   @default(UPLOADED)
+  manualData  Json?
+  uploadedBy  String?          @db.Uuid
+  createdAt   DateTime         @default(now())
+  extractedEntities ExtractedEntity[]
+  verifications EvidenceVerification[]
+  @@index([caseId, createdAt])
+  @@index([sha256])
+}
+
+model ExtractedEntity {
+  id               String   @id @default(uuid()) @db.Uuid
+  evidenceId       String   @db.Uuid
+  evidence         Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  type             String
+  rawValue         String
+  normalizedValue  String
+  confidence       Float
+  entityId         String?  @db.Uuid
+  entity           Entity?  @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  createdAt        DateTime @default(now())
+  @@index([normalizedValue])
+  @@index([evidenceId])
+}
+
+model Entity {
+  id              String           @id @default(uuid()) @db.Uuid
+  caseId          String           @db.Uuid
+  case            Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  type            String
+  canonicalValue  String
+  displayName     String
+  firstSeen       DateTime         @default(now())
+  lastSeen        DateTime         @updatedAt
+  aliases         EntityAlias[]
+  extracted       ExtractedEntity[]
+  outgoing        Relationship[]   @relation("RelationshipSource")
+  incoming        Relationship[]   @relation("RelationshipTarget")
+  @@unique([caseId, type, canonicalValue])
+  @@index([type, canonicalValue])
+}
+
+model EntityAlias {
+  id        String   @id @default(uuid()) @db.Uuid
+  entityId  String   @db.Uuid
+  entity    Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  value     String
+  source    String
+  createdAt DateTime @default(now())
+  @@unique([entityId, value])
+}
+
+model Relationship {
+  id           String   @id @default(uuid()) @db.Uuid
+  caseId       String   @db.Uuid
+  case         Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  sourceId     String   @db.Uuid
+  source       Entity   @relation("RelationshipSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetId     String   @db.Uuid
+  target       Entity   @relation("RelationshipTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  type         String
+  confidence   Float
+  evidenceId   String?  @db.Uuid
+  createdAt    DateTime @default(now())
+  @@unique([caseId, sourceId, targetId, type])
+  @@index([caseId])
+}
+
+model Transaction {
+  id          String   @id @default(uuid()) @db.Uuid
+  caseId      String   @db.Uuid
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  sender      String
+  receiver    String
+  amount      Decimal  @db.Decimal(18, 2)
+  currency    String   @default("INR")
+  occurredAt  DateTime?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  @@index([caseId, occurredAt])
+}
+
+model Investigation {
+  id          String   @id @default(uuid()) @db.Uuid
+  caseId      String   @db.Uuid
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  status      String   @default("PENDING")
+  narrative   String?
+  timeline    Json?
+  result      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([caseId, createdAt])
+}
+
+model Finding {
+  id             String          @id @default(uuid()) @db.Uuid
+  caseId         String          @db.Uuid
+  case           Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  category       String
+  title          String
+  description    String
+  severity       FindingSeverity
+  confidence     Float
+  status         FindingStatus   @default(PENDING)
+  evidenceRefs   String[]
+  analysis       Json?
+  createdAt      DateTime        @default(now())
+  @@index([caseId, status])
+}
+
+model RiskScore {
+  id             String   @id @default(uuid()) @db.Uuid
+  caseId         String   @db.Uuid
+  case           Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  score          Float
+  severity       FindingSeverity
+  factors        Json
+  explanation    String
+  evidenceRefs   String[]
+  createdAt      DateTime @default(now())
+  @@index([caseId, createdAt])
+}
+
+model Report {
+  id          String       @id @default(uuid()) @db.Uuid
+  caseId      String       @db.Uuid
+  case        Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  generatedBy String?      @db.Uuid
+  author      User?        @relation(fields: [generatedBy], references: [id], onDelete: SetNull)
+  status      ReportStatus @default(PROCESSING)
+  content     Json
+  createdAt   DateTime     @default(now())
+  @@index([caseId, createdAt])
+}
+
+model EvidenceVerification {
+  id          String   @id @default(uuid()) @db.Uuid
+  evidenceId  String   @db.Uuid
+  evidence    Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  originalHash String
+  currentHash  String
+  verified    Boolean
+  createdAt   DateTime @default(now())
+  @@index([evidenceId, createdAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  tokenHash String   @unique
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId, revokedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  @@index([resource, resourceId, createdAt])
+}
