@@ -1,0 +1,25 @@
+{
+    "target": "isFraud",
+    "categorical_features": [
+        "type"
+    ],
+    "numerical_features": [
+        "step",
+        "amount",
+        "oldbalanceOrg",
+        "newbalanceOrig",
+        "oldbalanceDest",
+        "newbalanceDest",
+        "isFlaggedFraud",
+        "orig_balance_change",
+        "dest_balance_change",
+        "balance_error_orig",
+        "balance_error_dest",
+        "amount_to_orig_balance",
+        "amount_to_dest_balance",
+        "hour",
+        "day"
+    ],
+    "model": "Random Forest",
+    "threshold": 0.5
+}

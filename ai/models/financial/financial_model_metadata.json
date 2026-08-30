@@ -1,0 +1,13 @@
+{
+    "model_name": "Random Forest",
+    "dataset": "PaySim",
+    "target": "isFraud",
+    "training_rows": 400000,
+    "testing_rows": 100000,
+    "accuracy": 0.99999,
+    "precision": 0.9923076923076923,
+    "recall": 1.0,
+    "f1": 0.9961389961389961,
+    "roc_auc": 0.999999922380491,
+    "pr_auc": 0.9999403697078115
+}
