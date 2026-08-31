@@ -4,6 +4,8 @@ import { FileUploader } from '../../components/evidence/FileUploader';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { Button } from '../../components/ui/Button';
+import { caseApi } from '../../services/caseApi';
+import { evidenceApi } from '../../services/evidenceApi';
 
 export const NewReport: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -16,22 +18,21 @@ export const NewReport: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState('');
   const [notes, setNotes] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Navigate to live progress analysis page with simulated state
-    navigate('/report/progress', {
-      state: {
-        type: activeType,
-        url,
-        message,
-        amount,
-        paymentMethod,
-        fileName: file?.name,
-      },
-    });
+    setSubmitting(true); setError(null);
+    try {
+      const created = await caseApi.createCase(`${activeType} evidence submission`, notes);
+      if (file) await evidenceApi.uploadFile(created.id, file);
+      else await caseApi.investigate(created.id, { extracted_text: [url, message, amount, paymentMethod, notes].filter(Boolean).join('\n'), entities: [], transactions: [], qr_codes: [] });
+      navigate(`/investigator/cases/${created.id}`);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Backend unavailable'); }
+    finally { setSubmitting(false); }
   };
 
   return (
@@ -144,8 +145,9 @@ export const NewReport: React.FC = () => {
           <Button variant="secondary" size="md" type="button" onClick={() => navigate('/reporter')}>
             Cancel
           </Button>
-          <Button variant="primary" size="md" type="submit" leftIcon={<span className="material-symbols-outlined text-[16px]">analytics</span>}>
-            Analyze Evidence
+          {error && <p className="text-[12px] text-[#A4262C] mr-auto">{error}</p>}
+          <Button variant="primary" size="md" type="submit" disabled={submitting} leftIcon={<span className="material-symbols-outlined text-[16px]">analytics</span>}>
+            {submitting ? 'Submitting…' : 'Analyze Evidence'}
           </Button>
         </div>
       </form>

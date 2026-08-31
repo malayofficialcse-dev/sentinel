@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockCases } from '../../data/mockData';
+import { caseApi } from '../../services/caseApi';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { SeverityBadge, CaseStatusBadge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -11,9 +11,15 @@ export const CaseList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [cases, setCases] = useState<Case[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const filteredCases = mockCases.filter((c) => {
+  useEffect(() => {
+    caseApi.getCases().then(setCases).catch((err) => setError(err instanceof Error ? err.message : 'Backend unavailable'));
+  }, []);
+
+  const filteredCases = cases.filter((c) => {
     const matchesSearch =
       c.id.toLowerCase().includes(search.toLowerCase()) ||
       c.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -162,6 +168,7 @@ export const CaseList: React.FC = () => {
       </div>
 
       {/* Cases Table */}
+      {error && <div className="text-[#A4262C]">{error}</div>}
       <DataTable
         columns={columns}
         data={filteredCases}

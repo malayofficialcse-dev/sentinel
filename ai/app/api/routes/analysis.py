@@ -15,6 +15,8 @@ class PipelineRequest(BaseModel):
     entities: list[dict[str, Any]] = Field(default_factory=list)
     transactions: list[dict[str, Any]] = Field(default_factory=list)
     indicators: list[dict[str, Any]] = Field(default_factory=list)
+    extracted_text: str = ""
+    qr_codes: list[str] = Field(default_factory=list)
 
 @router.post("/graph/analyze")
 async def graph_analyze(body: PipelineRequest):
@@ -32,7 +34,7 @@ async def pipeline_run(body: PipelineRequest):
 async def evidence_analyze(file: UploadFile = File(...), case_id: str = Form("")):
     raw = await file.read()
     result = ocr.extract(raw, file.content_type or "application/octet-stream")
-    state = {"case_id": case_id, "evidence": [{"id": file.filename or "upload", "mime_type": file.content_type}], "extracted_text": result.text, "entities": [], "transactions": []}
+    state = {"case_id": case_id, "evidence": [{"id": file.filename or "upload", "mime_type": file.content_type}], "extracted_text": result.text, "qr_codes": result.qr_codes, "entities": [], "transactions": [], "extraction_warnings": result.warnings}
     output = await InvestigationOrchestrator().run(state)
     output["qr_codes"] = result.qr_codes; output["extraction_warnings"] = result.warnings
     return output

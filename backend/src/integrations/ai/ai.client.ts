@@ -28,17 +28,18 @@ export class AIClient {
 
   private async request<T>(
     endpoint: string,
-    body: unknown
+    body: unknown,
+    method: "GET" | "POST" = "POST"
   ): Promise<T> {
 
     const response = await fetch(
       `${AI_CONFIG.baseURL}${endpoint}`,
       {
-        method: "POST",
+        method,
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(body),
+        ...(method === "POST" ? { body: JSON.stringify(body) } : {}),
         signal: AbortSignal.timeout(
           AI_CONFIG.timeout
         )
@@ -106,6 +107,26 @@ export class AIClient {
 
   async runPipeline(payload: unknown) {
     return this.request("/api/pipeline/run", payload);
+  }
+
+  async predictPhishing(payload: unknown) { return this.request("/api/models/phishing/predict", payload); }
+  async predictFinancial(payload: unknown) { return this.request("/api/models/financial/predict", payload); }
+  async scanMalware(payload: unknown) { return this.request("/api/models/malware/scan", payload); }
+  async scanMalwareHash(payload: unknown) { return this.request("/api/models/malware/hash", payload); }
+  async modelsInfo() { return this.request("/api/models/info", undefined, "GET"); }
+
+  async analyzeEvidence(file: Express.Multer.File, caseId: string) {
+    const form = new FormData();
+    const bytes = new Uint8Array(file.buffer);
+    form.append("file", new Blob([bytes.buffer as ArrayBuffer], { type: file.mimetype }), file.originalname);
+    form.append("case_id", caseId);
+    const response = await fetch(`${AI_CONFIG.baseURL}/api/evidence/analyze`, {
+      method: "POST",
+      body: form,
+      signal: AbortSignal.timeout(AI_CONFIG.timeout)
+    });
+    if (!response.ok) throw new Error(`AI service failed: ${response.status}`);
+    return response.json();
   }
 
   async calculateRisk(

@@ -7,14 +7,16 @@ export const AIModelsHub: React.FC = () => {
   const navigate = useNavigate();
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
         const data = await modelApi.getModelsInfo();
-        setModels(data);
+        setModels(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
+        setError(err instanceof Error ? err.message : 'Unable to load AI model metadata.');
       } finally {
         setLoading(false);
       }
@@ -52,8 +54,14 @@ export const AIModelsHub: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {loading ? (
           <div className="col-span-3 text-center py-12 text-[#605E5C]">Loading model parameters...</div>
+        ) : error ? (
+          <div className="col-span-3 text-center py-12 text-[#A4262C]">
+            {error} Please verify that the Node API and AI service are running.
+          </div>
+        ) : models.length === 0 ? (
+          <div className="col-span-3 text-center py-12 text-[#605E5C]">No AI models are currently available.</div>
         ) : (
-          models.map((model) => (
+          (Array.isArray(models) ? models : []).map((model) => (
             <div
               key={model.id}
               className="bg-white border border-[#E1DFDD] rounded-[8px] p-6 flex flex-col justify-between shadow-xs hover:border-[#0078D4] hover:shadow-md transition-all group"
@@ -87,7 +95,7 @@ export const AIModelsHub: React.FC = () => {
                   <div className="flex justify-between">
                     <span className="text-[#605E5C]">Accuracy:</span>
                     <span className="font-bold text-[#107C10]">
-                      {(model.accuracy * 100).toFixed(2)}%
+                      {typeof model.accuracy === 'number' ? `${(model.accuracy * 100).toFixed(2)}%` : 'Not available'}
                     </span>
                   </div>
                   <div className="flex justify-between">

@@ -218,8 +218,7 @@ class URLService:
             is_phishing = model_result["is_phishing"]
             prob = model_result["phishing_probability"]
         else:
-            # Heuristic fallback when model is not available
-            prob, is_phishing = self._heuristic_score(features)
+            raise RuntimeError("trained phishing inference model unavailable")
 
         risk = _calculate_risk(prob)
         reasons = _generate_reasons(features)
@@ -286,8 +285,12 @@ class URLService:
             service_dir = os.path.dirname(os.path.abspath(__file__))
             ai_dir = os.path.dirname(os.path.dirname(service_dir))
             model_dir = os.path.join(ai_dir, "models", "phishing")
-            model_path = os.path.join(model_dir, "url_model.pkl")
-            features_path = os.path.join(model_dir, "url_features.json")
+            # The active URL extractor produces the 22-feature representation.
+            # url_model.pkl requires a separate 50-feature webpage extractor that
+            # is not present in this production service. Use the saved compatible
+            # 22-feature model rather than padding inputs with fabricated zeros.
+            model_path = os.path.join(model_dir, "url_model1.pkl")
+            features_path = os.path.join(model_dir, "url_features1.json")
 
             if not os.path.exists(model_path):
                 return {"model_available": False, "is_phishing": False, "phishing_probability": 0.0}
@@ -297,8 +300,15 @@ class URLService:
                 with open(features_path) as f:
                     self._model_features = json.load(f)
 
+            missing_features = [feature for feature in self._model_features if feature not in features]
+            if missing_features:
+                return {
+                    "model_available": False,
+                    "error": "URL extractor does not implement required model features: " + ", ".join(missing_features)
+                }
+
             X = pd.DataFrame(
-                [[features.get(feat, 0) for feat in self._model_features]],
+                [[features[feat] for feat in self._model_features]],
                 columns=self._model_features
             )
 

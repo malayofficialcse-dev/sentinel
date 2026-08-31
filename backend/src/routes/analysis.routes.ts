@@ -1,11 +1,24 @@
 import { Router } from "express";
 import multer from "multer";
 import { analyzeEvidence, analyzeGraph, investigateCase } from "../controllers/analysis.controller";
+import { financial, malware, malwareHash, phishing, info } from "../controllers/model.controller";
+import { addEvidence, createCase, getCase, getCaseResource, investigateCase as investigatePersistedCase, listCases } from "../controllers/case.controller";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+router.post("/cases", createCase);
+router.get("/cases", listCases);
+router.post("/cases/:caseId/evidence", upload.single("file"), addEvidence);
+router.post("/cases/:caseId/investigate", investigatePersistedCase);
+router.get("/cases/:caseId", getCase);
+router.get("/cases/:caseId/:resource", getCaseResource);
 router.post("/graph/analyze", analyzeGraph);
 router.post("/investigation/analyze", investigateCase);
 router.post("/evidence/:id/analyze", upload.single("file"), analyzeEvidence);
 router.post("/cases/:caseId/investigate", investigateCase);
+router.post("/models/phishing/predict", phishing);
+router.post("/models/financial/predict", financial);
+router.post("/models/malware/scan", upload.single("file"), malware);
+router.post("/models/malware/hash", malwareHash);
+router.get("/models/info", info);
 export default router;

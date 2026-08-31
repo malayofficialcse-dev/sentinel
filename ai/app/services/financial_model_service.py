@@ -102,7 +102,9 @@ class FinancialModelService:
                 import pandas as pd
 
                 num_features = self._features_config.get("numerical_features", [])
-                X = pd.DataFrame([[feature_dict.get(feat, 0.0) for feat in num_features]], columns=num_features)
+                categorical_features = self._features_config.get("categorical_features", [])
+                expected_features = [*categorical_features, *num_features]
+                X = pd.DataFrame([[feature_dict.get(feat, "UNKNOWN" if feat in categorical_features else 0.0) for feat in expected_features]], columns=expected_features)
 
                 pred = self._model.predict(X)[0]
                 proba = self._model.predict_proba(X)[0]
@@ -115,10 +117,10 @@ class FinancialModelService:
 
                 is_fraud = bool(fraud_prob >= 0.5 or pred == 1)
 
-            except Exception:
-                fraud_prob, is_fraud = self._heuristic_predict(feature_dict)
+            except Exception as exc:
+                raise RuntimeError(f"trained financial inference failed: {exc}") from exc
         else:
-            fraud_prob, is_fraud = self._heuristic_predict(feature_dict)
+            raise RuntimeError("trained financial inference model unavailable")
 
         # Risk score and Level
         risk_score = round(fraud_prob * 100, 2)
@@ -140,8 +142,8 @@ class FinancialModelService:
             "risk_score": risk_score,
             "risk_level": risk_level,
             "model_name": self._metadata.get("model_name", "Random Forest (PaySim)"),
-            "accuracy": self._metadata.get("accuracy", 0.9999),
-            "features": feature_dict,
+            "accuracy": self._metadata.get("accuracy", "not_available"),
+            "features": {feature: feature_dict[feature] for feature in [*self._features_config.get("categorical_features", []), *self._features_config.get("numerical_features", [])]},
             "reasons": reasons,
             "model_loaded": self._loaded,
         }

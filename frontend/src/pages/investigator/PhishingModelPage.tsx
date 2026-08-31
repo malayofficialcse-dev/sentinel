@@ -5,16 +5,10 @@ import { Input } from '../../components/ui/Input';
 import { RiskBadge } from '../../components/ui/Badge';
 
 export const PhishingModelPage: React.FC = () => {
-  const [url, setUrl] = useState('https://bit.ly/sbi-kyc-verification-login');
+  const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PhishingPredictResponse | null>(null);
 
-  const sampleUrls = [
-    { label: '🔴 Fake Bank KYC (Phish)', value: 'https://bit.ly/sbi-kyc-verification-login' },
-    { label: '🔴 IP Address Hostname', value: 'http://192.168.1.100:8080/secure/update-profile' },
-    { label: '🟠 PayPal Spoof Domain', value: 'https://paypal-security-verification.com/login' },
-    { label: '🟢 Legitimate Official Portal', value: 'https://www.onlinesbi.sbi/portal/index.html' },
-  ];
 
   const handleScan = async () => {
     if (!url.trim()) return;
@@ -50,13 +44,8 @@ export const PhishingModelPage: React.FC = () => {
 
         <div className="flex items-center gap-3 bg-white p-3 border border-[#E1DFDD] rounded-[6px] shadow-xs">
           <div className="text-right">
-            <span className="text-[11px] text-[#605E5C] block">Model Accuracy</span>
-            <span className="font-bold text-[16px] text-[#107C10]">96.5%</span>
-          </div>
-          <div className="h-8 w-[1px] bg-[#E1DFDD]"></div>
-          <div className="text-right">
             <span className="text-[11px] text-[#605E5C] block">Feature Vector</span>
-            <span className="font-bold text-[16px] text-[#242424]">22 Dims</span>
+            <span className="font-bold text-[16px] text-[#242424]">Model-defined</span>
           </div>
         </div>
       </div>
@@ -79,20 +68,6 @@ export const PhishingModelPage: React.FC = () => {
           </Button>
         </div>
 
-        {/* Quick Presets */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#F3F2F1]">
-          <span className="text-[11px] text-[#605E5C] font-semibold">Test Presets:</span>
-          {sampleUrls.map((sample, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => setUrl(sample.value)}
-              className="text-[11px] px-2.5 py-1 bg-[#F3F2F1] hover:bg-[#E1DFDD] text-[#242424] rounded-[4px] font-medium transition-colors cursor-pointer"
-            >
-              {sample.label}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Results Section */}

@@ -248,7 +248,7 @@ export const FinancialModelPage: React.FC = () => {
                     <RiskBadge risk={result.risk_level} size="md" />
                   </div>
                   <p className="text-[13px] text-[#605E5C] mt-1">
-                    Evaluated by {result.model_name} (Accuracy: {(result.accuracy * 100).toFixed(2)}%)
+                    Evaluated by {result.model_name} (Accuracy: {typeof result.accuracy === 'number' ? `${(result.accuracy * 100).toFixed(2)}%` : 'Not available'})
                   </p>
                 </div>
               </div>

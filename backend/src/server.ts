@@ -1,46 +1,34 @@
-// import app from './app';
-
-// const port = Number(process.env.PORT || 4000);
-// app.listen(port, () => console.log(`Sentinel API listening on http://localhost:${port}/api/v1`));
-
-
-
-
-
 import app from "./app";
 import { env } from "./config/env";
-import {
-  connectDatabase,
-  disconnectDatabase
-} from "./config/database";
+import { connectDatabase, disconnectDatabase } from "./config/database";
 import { verifyNeo4jConnection } from "./config/neo4j";
 
 async function bootstrap() {
+  try {
+    await connectDatabase();
+  } catch (error) {
+    console.warn(
+      "PostgreSQL unavailable; starting without database features.",
+      error instanceof Error ? error.message : error
+    );
+  }
 
   try {
-
-    await connectDatabase();
-
     await verifyNeo4jConnection();
-
-    app.listen(env.PORT, () => {
-      console.log(
-        `🚀 Sentinel backend running on port ${env.PORT}`
-      );
-    });
-
   } catch (error) {
-
-    console.error(
-      "❌ Failed to start backend:",
-      error
+    console.warn(
+      "Neo4j unavailable; starting without graph features.",
+      error instanceof Error ? error.message : error
     );
-
-    process.exit(1);
   }
+
+  app.listen(env.PORT, () => {
+    console.log(`Sentinel backend running on http://localhost:${env.PORT}`);
+    console.log(`AI proxy target: ${env.AI_SERVICE_URL}`);
+  });
 }
 
-bootstrap();
+void bootstrap();
 
 process.on("SIGTERM", async () => {
   await disconnectDatabase();

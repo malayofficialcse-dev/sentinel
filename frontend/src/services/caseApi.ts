@@ -1,62 +1,57 @@
+import { apiClient } from './api';
 import { Case, CaseStatus, Severity } from '../types';
-import { mockCases } from '../data/mockData';
-import { delay } from './api';
 
-let cases = [...mockCases];
+type BackendCase = Record<string, any>;
+
+function mapCase(item: BackendCase): Case {
+  const score = item.riskScores?.[0]?.score ?? 0;
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description || '',
+    severity: item.severity as Severity,
+    status: item.status as CaseStatus,
+    riskScore: Number(score),
+    evidenceCount: item._count?.evidence ?? item.evidence?.length ?? 0,
+    entityCount: item._count?.entities ?? item.entities?.length ?? 0,
+    findingCount: item._count?.findings ?? item.findings?.length ?? 0,
+    transactionCount: item._count?.transactions ?? item.transactions?.length ?? 0,
+    relatedCaseCount: 0,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    tags: [],
+  };
+}
 
 export const caseApi = {
   async getCases(filters?: { status?: CaseStatus; severity?: Severity; search?: string }): Promise<Case[]> {
-    await delay(200);
-    let result = [...cases];
-    if (filters?.status) {
-      result = result.filter((c) => c.status === filters.status);
-    }
-    if (filters?.severity) {
-      result = result.filter((c) => c.severity === filters.severity);
-    }
-    if (filters?.search) {
-      const q = filters.search.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.id.toLowerCase().includes(q) ||
-          c.title.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q)
-      );
-    }
-    return result;
+    const res = await apiClient.get('/cases');
+    let cases: Case[] = (Array.isArray(res.data) ? res.data : res.data?.data || []).map(mapCase);
+    if (filters?.status) cases = cases.filter((item) => item.status === filters.status);
+    if (filters?.severity) cases = cases.filter((item) => item.severity === filters.severity);
+    if (filters?.search) { const query = filters.search.toLowerCase(); cases = cases.filter((item) => `${item.id} ${item.title} ${item.description}`.toLowerCase().includes(query)); }
+    return cases;
   },
-
   async getCaseById(id: string): Promise<Case | null> {
-    await delay(150);
-    return cases.find((c) => c.id.toLowerCase() === id.toLowerCase()) || null;
+    const res = await apiClient.get(`/cases/${id}`);
+    return res.data ? mapCase(res.data) : null;
   },
-
+  async getCaseData(id: string): Promise<Record<string, any> | null> {
+    const res = await apiClient.get(`/cases/${id}`);
+    return res.data || null;
+  },
+  async createCase(title: string, description?: string): Promise<Case> {
+    const res = await apiClient.post('/cases', { title, description });
+    return mapCase(res.data);
+  },
+  async investigate(caseId: string, payload: Record<string, unknown>) {
+    const res = await apiClient.post(`/cases/${caseId}/investigate`, payload, { timeout: 120000 });
+    return res.data;
+  },
   async updateCaseStatus(id: string, status: CaseStatus): Promise<Case> {
-    await delay(200);
-    const index = cases.findIndex((c) => c.id === id);
-    if (index === -1) throw new Error('Case not found');
-    cases[index] = { ...cases[index], status, updatedAt: new Date().toISOString() };
-    return cases[index];
+    throw new Error('Case status update API is not implemented yet.');
   },
-
-  async assignCase(id: string, userId: string, userName: string): Promise<Case> {
-    await delay(200);
-    const index = cases.findIndex((c) => c.id === id);
-    if (index === -1) throw new Error('Case not found');
-    cases[index] = {
-      ...cases[index],
-      assignedToId: userId,
-      assignedTo: {
-        id: userId,
-        name: userName,
-        email: `${userName.toLowerCase().replace(/\s+/g, '.')}@sentinel.gov`,
-        role: cases[index].assignedTo?.role || ('' as any),
-        status: 'active',
-        permissions: [],
-        createdAt: new Date().toISOString(),
-      },
-      updatedAt: new Date().toISOString(),
-    };
-    return cases[index];
+  async assignCase(_id: string, _userId: string, _userName: string): Promise<Case> {
+    throw new Error('Case assignment API is not implemented yet.');
   },
 };
