@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .api.routes import evidence, analyze, investigation, health, models
+from .api.routes import health, analysis, models
 
 
 app = FastAPI(
@@ -22,10 +22,8 @@ app.add_middleware(
 
 # Mount API Routers
 app.include_router(health.router, prefix="/api")
+app.include_router(analysis.router, prefix="/api")
 app.include_router(models.router, prefix="/api")
-app.include_router(evidence.router, prefix="/api")
-app.include_router(analyze.router, prefix="/api")
-app.include_router(investigation.router, prefix="/api")
 
 
 @app.get("/health", include_in_schema=False)

@@ -59,7 +59,7 @@ export class AIClient {
   ): Promise<ExtractionResponse> {
 
     return this.request<ExtractionResponse>(
-      "/api/v1/extraction",
+      "/api/evidence/analyze",
       request
     );
   }
@@ -95,9 +95,17 @@ export class AIClient {
     payload: unknown
   ) {
     return this.request(
-      "/api/v1/investigation",
+      "/api/investigation/analyze",
       payload
     );
+  }
+
+  async analyzeGraph(payload: unknown) {
+    return this.request("/api/graph/analyze", payload);
+  }
+
+  async runPipeline(payload: unknown) {
+    return this.request("/api/pipeline/run", payload);
   }
 
   async calculateRisk(

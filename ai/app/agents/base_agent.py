@@ -3,16 +3,8 @@ from typing import Any
 
 
 class BaseAgent(ABC):
-
-    name: str = "base-agent"
+    name = "base-agent"
 
     @abstractmethod
-    async def run(
-        self,
-        state: dict[str, Any]
-    ) -> dict[str, Any]:
-        """
-        Execute the agent and return
-        a state update.
-        """
+    async def run(self, state: dict[str, Any]) -> dict[str, Any]:
         raise NotImplementedError

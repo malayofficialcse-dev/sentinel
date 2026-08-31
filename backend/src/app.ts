@@ -125,6 +125,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import analysisRoutes from "./routes/analysis.routes";
 
 const app = express();
 
@@ -157,5 +158,7 @@ app.get("/health", (_req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+app.use("/api/v1", analysisRoutes);
 
 export default app;
