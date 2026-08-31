@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
-import { mockThreatIntel } from '../../data/mockData';
+import React, { useEffect, useState } from 'react';
+import { threatApi } from '../../services/threatApi';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { RiskBadge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { ThreatIntel } from '../../types';
 
 export const ThreatIntelligence: React.FC = () => {
+  const [threatList, setThreatList] = useState<ThreatIntel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const filtered = mockThreatIntel.filter(
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+    threatApi.getThreatIntel()
+      .then((data) => { if (mounted) setThreatList(data); })
+      .catch((err) => { if (mounted) setError(err instanceof Error ? err.message : 'Unable to load threat intelligence feed.'); })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  const filtered = threatList.filter(
     (t) =>
       t.indicator.toLowerCase().includes(search.toLowerCase()) ||
       t.description.toLowerCase().includes(search.toLowerCase()) ||
-      t.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase()))
+      (t.tags || []).some((tag) => tag.toLowerCase().includes(search.toLowerCase()))
   );
 
   const columns: Column<ThreatIntel>[] = [
@@ -78,9 +92,13 @@ export const ThreatIntelligence: React.FC = () => {
           Threat Intelligence & External Feeds
         </h1>
         <p className="text-[13px] text-[#605E5C]">
-          Domain reputation, proxy detections, malicious email senders, and known fraud syndicates.
+          Domain reputation, proxy detections, malicious IOCs, and known threat feeds.
         </p>
       </div>
+
+      {error && (
+        <div className="bg-[#FDE7E9] border border-[#E6A6AA] rounded-[4px] p-3 text-[#A4262C] text-[13px]">{error}</div>
+      )}
 
       <div className="flex items-center justify-between bg-white p-3 border border-[#E1DFDD] rounded-[4px]">
         <div className="w-80">
@@ -94,7 +112,21 @@ export const ThreatIntelligence: React.FC = () => {
         <span className="text-[12px] text-[#605E5C] font-mono">{filtered.length} Indicators Active</span>
       </div>
 
-      <DataTable columns={columns} data={filtered} keyField="id" />
+      {loading ? (
+        <div className="bg-white border border-[#E1DFDD] rounded-[4px] p-8 text-center text-[13px] text-[#605E5C]">
+          <span className="material-symbols-outlined text-[32px] text-[#C8C6C4] block mb-2">hourglass_top</span>
+          Loading threat intelligence feeds…
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="bg-white border border-[#E1DFDD] rounded-[4px] p-8 text-center text-[13px] text-[#605E5C]">
+          <span className="material-symbols-outlined text-[32px] text-[#C8C6C4] block mb-2">security</span>
+          {threatList.length === 0
+            ? 'No external threat intelligence feeds are currently configured.'
+            : 'No indicators match your search query.'}
+        </div>
+      ) : (
+        <DataTable columns={columns} data={filtered} keyField="id" />
+      )}
     </div>
   );
 };

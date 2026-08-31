@@ -6,6 +6,12 @@ function mapEvidence(item: any): Evidence {
 }
 
 export const evidenceApi = {
+  async getAllEvidence(caseId?: string): Promise<Evidence[]> {
+    const params: Record<string, string> = {};
+    if (caseId) params.caseId = caseId;
+    const res = await apiClient.get('/evidence', { params });
+    return (Array.isArray(res.data) ? res.data : res.data?.data || []).map(mapEvidence);
+  },
   async getEvidenceByCase(caseId: string): Promise<Evidence[]> {
     const res = await apiClient.get(`/cases/${caseId}/evidence`);
     return (Array.isArray(res.data) ? res.data : res.data?.data || []).map(mapEvidence);

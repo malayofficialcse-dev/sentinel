@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { Notification } from '../types';
-import { mockNotifications } from '../data/mockData';
 
 interface UIState {
   sidebarCollapsed: boolean;
@@ -10,6 +9,7 @@ interface UIState {
   isGlobalSearchOpen: boolean;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  addNotification: (n: Notification) => void;
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
   setGlobalSearchQuery: (query: string) => void;
@@ -18,13 +18,23 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   sidebarCollapsed: false,
-  notifications: mockNotifications,
-  unreadNotificationCount: mockNotifications.filter((n) => !n.read).length,
+  // Notifications start empty — real notifications come from backend events
+  notifications: [],
+  unreadNotificationCount: 0,
   globalSearchQuery: '',
   isGlobalSearchOpen: false,
 
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+
+  addNotification: (n: Notification) =>
+    set((state) => {
+      const updated = [n, ...state.notifications];
+      return {
+        notifications: updated,
+        unreadNotificationCount: updated.filter((x) => !x.read).length,
+      };
+    }),
 
   markNotificationAsRead: (id) =>
     set((state) => {

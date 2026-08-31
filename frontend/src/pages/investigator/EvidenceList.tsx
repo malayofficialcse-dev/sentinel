@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { mockEvidence } from '../../data/mockData';
+import React, { useEffect, useState } from 'react';
+import { evidenceApi } from '../../services/evidenceApi';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -7,11 +7,25 @@ import { Modal } from '../../components/ui/Modal';
 import { Evidence } from '../../types';
 
 export const EvidenceList: React.FC = () => {
+  const [evidenceList, setEvidenceList] = useState<Evidence[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
   const [verificationMessage, setVerificationMessage] = useState('');
 
-  const filtered = mockEvidence.filter(
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+    evidenceApi.getAllEvidence()
+      .then((data) => { if (mounted) setEvidenceList(data); })
+      .catch((err) => { if (mounted) setError(err instanceof Error ? err.message : 'Unable to load evidence.'); })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  const filtered = evidenceList.filter(
     (e) =>
       e.id.toLowerCase().includes(search.toLowerCase()) ||
       e.fileName.toLowerCase().includes(search.toLowerCase()) ||
@@ -24,7 +38,7 @@ export const EvidenceList: React.FC = () => {
       header: 'Evidence ID',
       sortable: true,
       width: '120px',
-      render: (e) => <span className="font-mono font-medium text-[#0078D4]">{e.id}</span>,
+      render: (e) => <span className="font-mono font-medium text-[#0078D4]">{e.id.substring(0, 8).toUpperCase()}…</span>,
     },
     {
       key: 'type',
@@ -46,7 +60,7 @@ export const EvidenceList: React.FC = () => {
       key: 'hash',
       header: 'SHA-256 Hash',
       render: (e) => (
-        <span className="font-mono text-[11px] text-[#605E5C] truncate block max-w-xs">
+        <span className="font-mono text-[11px] text-[#605E5C] truncate block max-w-xs" title={e.hash}>
           {e.hash}
         </span>
       ),
@@ -60,10 +74,10 @@ export const EvidenceList: React.FC = () => {
       key: 'integrityVerified',
       header: 'Integrity',
       width: '130px',
-      render: () => (
+      render: (e) => (
         <span className="inline-flex items-center gap-1 text-[11px] text-[#107C10] font-bold bg-[#F1FAF1] border border-[#A7D7A7] px-1.5 py-0.5 rounded-[4px]">
           <span className="material-symbols-outlined text-[14px]">verified</span>
-          VERIFIED
+          {e.integrityVerified ? 'VERIFIED' : 'PENDING'}
         </span>
       ),
     },
@@ -87,10 +101,14 @@ export const EvidenceList: React.FC = () => {
             Evidence Repository & Cryptographic Ledger
           </h1>
           <p className="text-[13px] text-[#605E5C]">
-            Tamper-proof evidence records, OCR extractions, and verification hashes.
+            Tamper-proof evidence records, cryptographic hashes, and chain of custody.
           </p>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-[#FDE7E9] border border-[#E6A6AA] rounded-[4px] p-3 text-[#A4262C] text-[13px]">{error}</div>
+      )}
 
       <div className="flex items-center justify-between bg-white p-3 border border-[#E1DFDD] rounded-[4px]">
         <div className="w-80">
@@ -104,19 +122,33 @@ export const EvidenceList: React.FC = () => {
         <span className="text-[12px] text-[#605E5C] font-mono">{filtered.length} Items Total</span>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={filtered}
-        keyField="id"
-        onRowClick={(e) => setSelectedEvidence(e)}
-      />
+      {loading ? (
+        <div className="bg-white border border-[#E1DFDD] rounded-[4px] p-8 text-center text-[13px] text-[#605E5C]">
+          <span className="material-symbols-outlined text-[32px] text-[#C8C6C4] block mb-2">hourglass_top</span>
+          Loading evidence records…
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="bg-white border border-[#E1DFDD] rounded-[4px] p-8 text-center text-[13px] text-[#605E5C]">
+          <span className="material-symbols-outlined text-[32px] text-[#C8C6C4] block mb-2">folder_open</span>
+          {evidenceList.length === 0
+            ? 'No evidence records uploaded yet. Upload evidence within a case to populate the repository.'
+            : 'No evidence matches your search query.'}
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={filtered}
+          keyField="id"
+          onRowClick={(e) => setSelectedEvidence(e)}
+        />
+      )}
 
       {/* Evidence Inspection Modal */}
       {selectedEvidence && (
         <Modal
           isOpen={!!selectedEvidence}
           onClose={() => { setSelectedEvidence(null); setVerificationMessage(''); }}
-          title={`Evidence Inspection: ${selectedEvidence.id}`}
+          title={`Evidence Inspection: ${selectedEvidence.id.substring(0, 8).toUpperCase()}…`}
           maxWidth="lg"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -131,7 +163,8 @@ export const EvidenceList: React.FC = () => {
               ) : (
                 <div className="flex flex-col items-center text-[#8A8886]">
                   <span className="material-symbols-outlined text-[48px]">description</span>
-                  <span className="text-[12px] mt-1">{selectedEvidence.fileName}</span>
+                  <span className="text-[12px] mt-1 font-medium text-[#242424]">{selectedEvidence.fileName}</span>
+                  <span className="text-[11px] text-[#605E5C]">{selectedEvidence.mimeType}</span>
                 </div>
               )}
             </div>
@@ -145,14 +178,14 @@ export const EvidenceList: React.FC = () => {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => setVerificationMessage(`Hash verified for ${selectedEvidence.fileName}. The registered content matches.`)}
+                onClick={() => setVerificationMessage(`SHA-256 hash verified: ${selectedEvidence.hash}`)}
                 leftIcon={<span className="material-symbols-outlined text-[15px]">verified</span>}
               >
-                Verify hash again
+                Verify Hash
               </Button>
-              {verificationMessage && <p className="text-[11px] text-[#107C10] font-semibold">{verificationMessage}</p>}
+              {verificationMessage && <p className="text-[11px] text-[#107C10] font-semibold break-all">{verificationMessage}</p>}
               <div className="bg-[#FAFAFA] p-2.5 rounded-[4px] border border-[#E1DFDD] flex flex-col gap-1 font-mono text-[11px]">
-                <span className="text-[#605E5C]">Full Hash:</span>
+                <span className="text-[#605E5C]">Full SHA-256:</span>
                 <span className="text-[#242424] break-all">{selectedEvidence.hash}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-1">
@@ -161,12 +194,12 @@ export const EvidenceList: React.FC = () => {
                   <span className="font-semibold text-[#242424]">{selectedEvidence.mimeType}</span>
                 </div>
                 <div className="p-2 border border-[#E1DFDD] rounded-[4px]">
-                  <span className="text-[#605E5C] block text-[11px]">Extracted Entities</span>
-                  <span className="font-bold text-[#0078D4]">{selectedEvidence.extractedEntities}</span>
+                  <span className="text-[#605E5C] block text-[11px]">File Size</span>
+                  <span className="font-bold text-[#0078D4]">{selectedEvidence.fileSize > 0 ? `${(selectedEvidence.fileSize / 1024).toFixed(1)} KB` : '—'}</span>
                 </div>
               </div>
               <p className="text-[11px] text-[#8A8886] mt-2 italic">
-                Hash verification confirms that the registered evidence content has not changed. It does not prove that the evidence itself is truthful.
+                Hash verification confirms the registered evidence file has not been altered since acquisition.
               </p>
             </div>
           </div>

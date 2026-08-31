@@ -1,11 +1,31 @@
-import React, { useState } from 'react';
-import { mockUsers } from '../../data/mockData';
+import React, { useEffect, useState } from 'react';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/Button';
-import { User, UserRole } from '../../types';
+import { User, UserRole, Permission } from '../../types';
+import { apiClient } from '../../services/api';
 
 export const UserManagement: React.FC = () => {
-  const [usersList, setUsersList] = useState<User[]>(mockUsers);
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+    apiClient.get('/users')
+      .then((res) => {
+        if (mounted) {
+          const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+          setUsersList(list);
+        }
+      })
+      .catch((err) => {
+        if (mounted) setError(err instanceof Error ? err.message : 'Unable to load user accounts.');
+      })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
 
   const columns: Column<User>[] = [
     {
@@ -14,14 +34,8 @@ export const UserManagement: React.FC = () => {
       sortable: true,
       render: (u) => (
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-[4px] bg-[#E1DFDD] overflow-hidden">
-            {u.avatar ? (
-              <img src={u.avatar} alt="Avatar" className="w-full h-full object-cover" />
-            ) : (
-              <span className="material-symbols-outlined text-[16px] text-[#605E5C] flex items-center justify-center h-full">
-                person
-              </span>
-            )}
+          <div className="w-7 h-7 rounded-[4px] bg-[#E1DFDD] overflow-hidden flex items-center justify-center">
+            <span className="material-symbols-outlined text-[16px] text-[#605E5C]">person</span>
           </div>
           <div className="flex flex-col">
             <span className="font-semibold text-[#242424]">{u.name}</span>
@@ -53,40 +67,17 @@ export const UserManagement: React.FC = () => {
               : 'bg-[#F3F2F1] text-[#8A8886]'
           }`}
         >
-          {u.status.toUpperCase()}
+          {u.status?.toUpperCase() || 'ACTIVE'}
         </span>
       ),
     },
     {
-      key: 'lastLogin',
-      header: 'Last Login',
+      key: 'createdAt',
+      header: 'Created',
       render: (u) => (
         <span className="text-[12px] text-[#605E5C]">
-          {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}
+          {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
         </span>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Action',
-      align: 'right',
-      width: '120px',
-      render: (u) => (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => {
-            setUsersList((prev) =>
-              prev.map((item) =>
-                item.id === u.id
-                  ? { ...item, status: item.status === 'active' ? 'inactive' : 'active' }
-                  : item
-              )
-            );
-          }}
-        >
-          {u.status === 'active' ? 'Deactivate' : 'Activate'}
-        </Button>
       ),
     },
   ];
@@ -102,12 +93,25 @@ export const UserManagement: React.FC = () => {
             Manage authorized investigators, intelligence analysts, and reviewer accounts.
           </p>
         </div>
-        <Button variant="primary" size="md" leftIcon={<span className="material-symbols-outlined text-[16px]">person_add</span>}>
-          Add User
-        </Button>
       </div>
 
-      <DataTable columns={columns} data={usersList} keyField="id" />
+      {error && (
+        <div className="bg-[#FDE7E9] border border-[#E6A6AA] rounded-[4px] p-3 text-[#A4262C] text-[13px]">{error}</div>
+      )}
+
+      {loading ? (
+        <div className="bg-white border border-[#E1DFDD] rounded-[4px] p-8 text-center text-[13px] text-[#605E5C]">
+          <span className="material-symbols-outlined text-[32px] text-[#C8C6C4] block mb-2">hourglass_top</span>
+          Loading user accounts…
+        </div>
+      ) : usersList.length === 0 ? (
+        <div className="bg-white border border-[#E1DFDD] rounded-[4px] p-8 text-center text-[13px] text-[#605E5C]">
+          <span className="material-symbols-outlined text-[32px] text-[#C8C6C4] block mb-2">manage_accounts</span>
+          No user accounts configured in database. User authentication is running in development system mode.
+        </div>
+      ) : (
+        <DataTable columns={columns} data={usersList} keyField="id" />
+      )}
     </div>
   );
 };

@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Entity, EntityType } from '../../types';
 
+export interface GraphRelationship {
+  id?: string;
+  sourceId?: string;
+  targetId?: string;
+  source?: Entity | { id: string; canonicalValue?: string; value?: string; type?: string };
+  target?: Entity | { id: string; canonicalValue?: string; value?: string; type?: string };
+  type: string;
+  confidence?: number;
+}
+
 interface GraphViewerProps {
+  entities?: Entity[];
+  relationships?: GraphRelationship[];
   onSelectEntity?: (entity: Entity | null) => void;
   selectedEntityId?: string | null;
 }
 
-interface NodeData {
+interface RenderNode {
   id: string;
-  type: EntityType;
+  rawEntity: Entity;
+  type: string;
   title: string;
   subtitle: string;
   meta: string;
@@ -17,143 +30,230 @@ interface NodeData {
   x: number;
   y: number;
   width: number;
-  isHighRisk?: boolean;
+  isHighRisk: boolean;
 }
 
+interface RenderEdge {
+  id: string;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  type: string;
+  isHighRisk: boolean;
+}
+
+const getEntityIcon = (type: string): string => {
+  const t = (type || '').toUpperCase();
+  switch (t) {
+    case 'UPI': return 'alternate_email';
+    case 'PHONE': return 'call';
+    case 'EMAIL': return 'mail';
+    case 'BANK_ACCOUNT': return 'account_balance';
+    case 'IFSC': return 'account_balance_wallet';
+    case 'TRANSACTION': return 'receipt_long';
+    case 'URL': case 'DOMAIN': return 'language';
+    case 'IP': case 'IP_ADDRESS': return 'router';
+    case 'PERSON': return 'person';
+    default: return 'fingerprint';
+  }
+};
+
 export const GraphViewer: React.FC<GraphViewerProps> = ({
+  entities = [],
+  relationships = [],
   onSelectEntity,
-  selectedEntityId = 'ENT-001',
+  selectedEntityId,
 }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [selectedId, setSelectedId] = useState<string>(selectedEntityId || 'ENT-001');
+  const [selectedId, setSelectedId] = useState<string | null>(selectedEntityId || null);
 
-  const nodes: NodeData[] = [
-    {
-      id: 'ENT-004',
-      type: EntityType.PERSON,
-      title: 'Victim Account',
-      subtitle: 'ID: VIC-88921',
-      meta: 'Loss: ₹45,000',
-      riskScore: 10,
-      icon: 'person',
-      x: 60,
-      y: 160,
-      width: 190,
-    },
-    {
-      id: 'ENT-001',
-      type: EntityType.UPI,
-      title: 'fraudster@example',
-      subtitle: 'Entity: UPI ID',
-      meta: 'Txns: 142 (Last 24h)',
-      riskScore: 94,
-      icon: 'alternate_email',
-      x: 380,
-      y: 140,
-      width: 230,
-      isHighRisk: true,
-    },
-    {
-      id: 'ENT-003',
-      type: EntityType.BANK_ACCOUNT,
-      title: 'Mule Acc #441',
-      subtitle: 'Status: Frozen',
-      meta: 'Bal: ₹1,200',
-      riskScore: 92,
-      icon: 'account_balance_wallet',
-      x: 520,
-      y: 330,
-      width: 190,
-      isHighRisk: true,
-    },
-    {
-      id: 'ENT-002',
-      type: EntityType.BANK_ACCOUNT,
-      title: 'ICICI Bank Ltd',
-      subtitle: 'Branch: Mumbai Main',
-      meta: 'IFSC: ICIC0000001',
-      riskScore: 15,
-      icon: 'account_balance',
-      x: 760,
-      y: 330,
-      width: 190,
-    },
-  ];
+  // Compute dynamic layout for real entities
+  const { nodes, edges } = useMemo(() => {
+    if (!entities || entities.length === 0) {
+      return { nodes: [], edges: [] };
+    }
 
-  const handleNodeClick = (node: NodeData) => {
+    const count = entities.length;
+    const centerX = 500;
+    const centerY = 300;
+    const radius = Math.max(180, Math.min(380, count * 55));
+
+    // Layout nodes in an organized elliptical layout or grid
+    const positionedNodes: RenderNode[] = entities.map((entity, index) => {
+      let x = centerX;
+      let y = centerY;
+
+      if (count === 1) {
+        x = centerX - 100;
+        y = centerY - 50;
+      } else {
+        const angle = (2 * Math.PI * index) / count - Math.PI / 2;
+        x = centerX + radius * Math.cos(angle) - 100;
+        y = centerY + (radius * 0.75) * Math.sin(angle) - 40;
+      }
+
+      const risk = Number(entity.riskScore ?? 0);
+      const isHighRisk = risk >= 70;
+
+      return {
+        id: entity.id,
+        rawEntity: entity,
+        type: entity.type || 'ENTITY',
+        title: entity.displayName || entity.value || 'Entity',
+        subtitle: `Type: ${entity.type}`,
+        meta: entity.caseCount ? `${entity.caseCount} Case(s)` : 'Extracted IOC',
+        riskScore: risk,
+        icon: getEntityIcon(entity.type),
+        x: Math.round(x),
+        y: Math.round(y),
+        width: 210,
+        isHighRisk,
+      };
+    });
+
+    const nodeMap = new Map<string, RenderNode>();
+    for (const n of positionedNodes) {
+      nodeMap.set(n.id.toLowerCase(), n);
+      nodeMap.set((n.rawEntity.value || '').toLowerCase(), n);
+      nodeMap.set((n.rawEntity.displayName || '').toLowerCase(), n);
+    }
+
+    // Build dynamic edges
+    const positionedEdges: RenderEdge[] = [];
+    relationships.forEach((rel, idx) => {
+      const srcObj = rel.source as any;
+      const tgtObj = rel.target as any;
+
+      const sourceKey = (
+        rel.sourceId ||
+        (typeof rel.source === 'string' ? rel.source : srcObj?.id || srcObj?.canonicalValue || srcObj?.value) ||
+        ''
+      ).toLowerCase();
+
+      const targetKey = (
+        rel.targetId ||
+        (typeof rel.target === 'string' ? rel.target : tgtObj?.id || tgtObj?.canonicalValue || tgtObj?.value) ||
+        ''
+      ).toLowerCase();
+
+      const src = nodeMap.get(sourceKey);
+      const tgt = nodeMap.get(targetKey);
+
+      if (src && tgt && src.id !== tgt.id) {
+        positionedEdges.push({
+          id: rel.id || `edge-${idx}`,
+          sourceX: src.x + src.width / 2,
+          sourceY: src.y + 40,
+          targetX: tgt.x + tgt.width / 2,
+          targetY: tgt.y + 40,
+          type: rel.type || 'RELATED_TO',
+          isHighRisk: src.isHighRisk || tgt.isHighRisk,
+        });
+      }
+    });
+
+    return { nodes: positionedNodes, edges: positionedEdges };
+  }, [entities, relationships]);
+
+  const handleNodeClick = (node: RenderNode) => {
     setSelectedId(node.id);
     if (onSelectEntity) {
-      const entity: Entity = {
-        id: node.id,
-        type: node.type,
-        value: node.title,
-        displayName: node.title,
-        confidence: 94,
-        riskScore: node.riskScore,
-        caseCount: 7,
-        firstSeen: '2026-08-14T08:22:00Z',
-        lastSeen: '2026-08-28T14:05:00Z',
-        metadata: {
-          provider: 'PayTM Payments Bank',
-          linkedName: '"Sharma Electronics"',
-          ip: '103.44.xx.xx (Proxy)',
-        },
-        relatedEntityIds: ['ENT-003', 'ENT-002'],
-      };
-      onSelectEntity(entity);
+      onSelectEntity(node.rawEntity);
     }
   };
 
+  if (nodes.length === 0) {
+    return (
+      <div className="flex-1 bg-[#FAFAFA] flex flex-col items-center justify-center h-full w-full p-8 text-center border border-[#E1DFDD] rounded-[4px]">
+        <span className="material-symbols-outlined text-[48px] text-[#C8C6C4] mb-2">hub</span>
+        <h3 className="font-bold text-[15px] text-[#242424]">No Entity Graph Mapped Yet</h3>
+        <p className="text-[13px] text-[#605E5C] max-w-md mt-1">
+          Upload evidence containing UPI IDs, phone numbers, or bank transfers. The AI graph engine will automatically correlate and link related nodes.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex-1 bg-[var(--bg-app)] relative overflow-hidden flex flex-col h-full w-full select-none transition-colors">
+    <div className="flex-1 bg-[var(--bg-app,#FAFAFA)] relative overflow-hidden flex flex-col h-full w-full select-none transition-colors border border-[#E1DFDD] rounded-[4px]">
       {/* Canvas Toolbar */}
-      <div className="absolute top-4 left-4 bg-[var(--surface)] border border-[var(--border)] rounded-[4px] flex items-center p-1 shadow-md z-20 gap-1">
+      <div className="absolute top-4 left-4 bg-white border border-[#E1DFDD] rounded-[4px] flex items-center p-1 shadow-md z-20 gap-1">
         <button
           onClick={() => setZoomLevel((z) => Math.min(1.5, z + 0.1))}
-          className="p-1 rounded-[4px] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+          className="p-1 rounded-[4px] hover:bg-[#F3F2F1] text-[#605E5C] hover:text-[#242424] cursor-pointer"
           title="Zoom In"
         >
           <span className="material-symbols-outlined text-[18px]">zoom_in</span>
         </button>
         <button
           onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.1))}
-          className="p-1 rounded-[4px] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+          className="p-1 rounded-[4px] hover:bg-[#F3F2F1] text-[#605E5C] hover:text-[#242424] cursor-pointer"
           title="Zoom Out"
         >
           <span className="material-symbols-outlined text-[18px]">zoom_out</span>
         </button>
-        <div className="w-px h-4 bg-[var(--border)] mx-1" />
+        <div className="w-px h-4 bg-[#E1DFDD] mx-1" />
         <button
           onClick={() => setZoomLevel(1)}
-          className="p-1 rounded-[4px] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+          className="p-1 rounded-[4px] hover:bg-[#F3F2F1] text-[#605E5C] hover:text-[#242424] cursor-pointer"
           title="Reset View"
         >
           <span className="material-symbols-outlined text-[18px]">center_focus_strong</span>
         </button>
       </div>
 
+      {/* Legend */}
+      <div className="absolute bottom-3 left-4 bg-white/90 backdrop-blur-xs border border-[#E1DFDD] rounded-[4px] px-3 py-1.5 shadow-xs z-20 text-[11px] text-[#605E5C] flex items-center gap-4 font-mono">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-[#0078D4]" /> {nodes.length} Entities
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-[#D13438]" /> {edges.length} Relationships
+        </span>
+      </div>
+
       {/* Graph Canvas Grid */}
       <div
-        className="flex-1 relative overflow-auto bg-grid-pattern h-full w-full"
+        className="flex-1 relative overflow-auto bg-grid-pattern h-full w-full min-h-[500px]"
         style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }}
       >
         {/* SVG Connector Lines */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 min-w-[1000px] min-h-[600px]">
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 min-w-[1200px] min-h-[800px]">
           <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--border-strong, #8A8886)" />
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#0078D4" />
             </marker>
             <marker id="arrow-red" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--danger, #D13438)" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#D13438" />
             </marker>
           </defs>
 
-          {/* Victim to UPI */}
-          <line x1="250" y1="200" x2="380" y2="185" stroke="var(--border-strong, #8A8886)" strokeWidth="2" strokeDasharray="4" markerEnd="url(#arrow)" />
-          {/* UPI to Mule */}
-          <line x1="495" y1="235" x2="570" y2="330" stroke="var(--danger, #D13438)" strokeWidth="2" markerEnd="url(#arrow-red)" />
-          {/* Mule to Bank */}
-          <line x1="710" y1="380" x2="760" y2="380" stroke="var(--border-strong, #8A8886)" strokeWidth="2" markerEnd="url(#arrow)" />
+          {edges.map((edge) => (
+            <g key={edge.id}>
+              <line
+                x1={edge.sourceX}
+                y1={edge.sourceY}
+                x2={edge.targetX}
+                y2={edge.targetY}
+                stroke={edge.isHighRisk ? '#D13438' : '#0078D4'}
+                strokeWidth="2"
+                strokeDasharray={edge.isHighRisk ? 'none' : '4 2'}
+                markerEnd={edge.isHighRisk ? 'url(#arrow-red)' : 'url(#arrow-blue)'}
+              />
+              <text
+                x={(edge.sourceX + edge.targetX) / 2}
+                y={(edge.sourceY + edge.targetY) / 2 - 6}
+                fill="#605E5C"
+                fontSize="10"
+                fontFamily="monospace"
+                textAnchor="middle"
+                className="bg-white"
+              >
+                {edge.type}
+              </text>
+            </g>
+          ))}
         </svg>
 
         {/* Nodes */}
@@ -164,45 +264,46 @@ export const GraphViewer: React.FC<GraphViewerProps> = ({
               key={node.id}
               onClick={() => handleNodeClick(node)}
               style={{ top: `${node.y}px`, left: `${node.x}px`, width: `${node.width}px` }}
-              className={`absolute bg-[var(--surface)] rounded-[4px] p-3 flex flex-col gap-1 z-10 shadow-sm cursor-pointer transition-all duration-150 ${
+              className={`absolute bg-white rounded-[4px] p-3 flex flex-col gap-1 z-10 shadow-sm cursor-pointer transition-all duration-150 ${
                 isSelected
-                  ? 'border-2 border-[var(--primary)] ring-3 ring-[var(--primary)]/20 shadow-md'
+                  ? 'border-2 border-[#0078D4] ring-3 ring-[#0078D4]/20 shadow-md'
                   : node.isHighRisk
-                    ? 'border border-[var(--danger-border)] hover:shadow-md'
-                    : 'border border-[var(--border)] hover:border-[var(--primary)] hover:shadow-sm'
+                    ? 'border-2 border-[#D13438] hover:shadow-md'
+                    : 'border border-[#E1DFDD] hover:border-[#0078D4] hover:shadow-sm'
               }`}
             >
               <div
                 className={`flex items-center justify-between border-b pb-1.5 ${
-                  node.isHighRisk ? 'border-[var(--danger-border)]' : 'border-[var(--border)]'
+                  node.isHighRisk ? 'border-[#FDE7E9]' : 'border-[#E1DFDD]'
                 }`}
               >
                 <div className="flex items-center gap-1.5 overflow-hidden">
                   <span
                     className={`material-symbols-outlined p-1 rounded-[4px] text-[16px] ${
-                      node.isHighRisk ? 'bg-[var(--danger-bg)] text-[var(--danger)]' : 'bg-[var(--info-bg)] text-[var(--primary)]'
+                      node.isHighRisk ? 'bg-[#FDE7E9] text-[#D13438]' : 'bg-[#EFF6FC] text-[#0078D4]'
                     }`}
                   >
                     {node.icon}
                   </span>
                   <span
                     className={`text-[12px] font-bold truncate ${
-                      node.isHighRisk ? 'text-[var(--danger)]' : 'text-[var(--text-primary)]'
+                      node.isHighRisk ? 'text-[#D13438]' : 'text-[#242424]'
                     }`}
+                    title={node.title}
                   >
                     {node.title}
                   </span>
                 </div>
-                {node.riskScore >= 80 && (
-                  <span className="text-[10px] font-bold text-[var(--danger)] bg-[var(--danger-bg)] px-1 rounded-[4px]">
+                {node.riskScore >= 50 && (
+                  <span className="text-[10px] font-bold text-[#D13438] bg-[#FDE7E9] px-1 rounded-[4px]">
                     {node.riskScore}%
                   </span>
                 )}
               </div>
 
-              <div className="flex flex-col gap-0.5 mt-1 text-[11px] text-[var(--text-secondary)]">
+              <div className="flex flex-col gap-0.5 mt-1 text-[11px] text-[#605E5C]">
                 <span className="truncate">{node.subtitle}</span>
-                <span className="truncate font-semibold text-[var(--text-primary)]">{node.meta}</span>
+                <span className="truncate font-semibold text-[#242424] font-mono">{node.meta}</span>
               </div>
             </div>
           );

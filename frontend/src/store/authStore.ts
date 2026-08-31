@@ -1,32 +1,43 @@
 import { create } from 'zustand';
 import { User, UserRole, Permission } from '../types';
-import { mockUsers } from '../data/mockData';
+
+// System-level user used when auth is bypassed (no real login system active).
+// This does NOT represent a real person — it is a neutral placeholder.
+const systemUser: User = {
+  id: 'SYS-INVESTIGATOR',
+  name: 'System User',
+  email: 'system@sentinel.local',
+  role: UserRole.INVESTIGATOR,
+  status: 'active',
+  permissions: Object.values(Permission),
+  createdAt: new Date().toISOString(),
+};
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   role: UserRole | null;
   permissions: Permission[];
-  login: (role?: UserRole, userIndex?: number) => void;
+  login: (role?: UserRole) => void;
   logout: () => void;
   switchRole: (role: UserRole) => void;
   hasPermission: (permission: Permission) => boolean;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  // Default to Investigator (Rahul Sharma) for rich initial demo experience
-  user: mockUsers[0],
+  // Auto-authenticated as a neutral system user (real auth system is not yet active)
+  user: systemUser,
   isAuthenticated: true,
   role: UserRole.INVESTIGATOR,
-  permissions: mockUsers[0].permissions,
+  permissions: systemUser.permissions,
 
-  login: (role = UserRole.INVESTIGATOR, userIndex = 0) => {
-    const selectedUser = mockUsers.find((u) => u.role === role) || mockUsers[userIndex] || mockUsers[0];
+  login: (role = UserRole.INVESTIGATOR) => {
+    const user = { ...systemUser, role };
     set({
-      user: selectedUser,
+      user,
       isAuthenticated: true,
-      role: selectedUser.role,
-      permissions: selectedUser.permissions,
+      role,
+      permissions: systemUser.permissions,
     });
   },
 
@@ -40,15 +51,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   switchRole: (role: UserRole) => {
-    const userWithRole = mockUsers.find((u) => u.role === role) || {
-      ...mockUsers[0],
-      role,
-      permissions: role === UserRole.ADMIN ? Object.values(Permission) : mockUsers[0].permissions,
-    };
+    const user = { ...systemUser, role };
     set({
-      user: userWithRole,
-      role: userWithRole.role,
-      permissions: userWithRole.permissions,
+      user,
+      role,
+      permissions: systemUser.permissions,
       isAuthenticated: true,
     });
   },

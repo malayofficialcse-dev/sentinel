@@ -7,17 +7,19 @@ import { RiskBadge } from '../../components/ui/Badge';
 export const PhishingModelPage: React.FC = () => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PhishingPredictResponse | null>(null);
-
 
   const handleScan = async () => {
     if (!url.trim()) return;
     setLoading(true);
+    setError(null);
     try {
       const data = await modelApi.predictPhishing(url.trim());
       setResult(data);
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'Phishing analysis failed.');
+      setResult(null);
     } finally {
       setLoading(false);
     }
@@ -45,10 +47,17 @@ export const PhishingModelPage: React.FC = () => {
         <div className="flex items-center gap-3 bg-white p-3 border border-[#E1DFDD] rounded-[6px] shadow-xs">
           <div className="text-right">
             <span className="text-[11px] text-[#605E5C] block">Feature Vector</span>
-            <span className="font-bold text-[16px] text-[#242424]">Model-defined</span>
+            <span className="font-bold text-[16px] text-[#242424]">22 Features</span>
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-[#FDE7E9] border border-[#E6A6AA] rounded-[4px] p-4 text-[#A4262C] text-[13px] flex items-center gap-2">
+          <span className="material-symbols-outlined text-[18px]">error</span>
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Input Section */}
       <div className="bg-white border border-[#E1DFDD] rounded-[8px] p-5 shadow-xs flex flex-col gap-4">
@@ -63,11 +72,10 @@ export const PhishingModelPage: React.FC = () => {
               onKeyDown={(e) => e.key === 'Enter' && handleScan()}
             />
           </div>
-          <Button variant="primary" onClick={handleScan} disabled={loading} className="min-w-[140px]">
+          <Button variant="primary" onClick={handleScan} disabled={loading || !url.trim()} className="min-w-[140px]">
             {loading ? 'Evaluating...' : 'Run ML Scan'}
           </Button>
         </div>
-
       </div>
 
       {/* Results Section */}

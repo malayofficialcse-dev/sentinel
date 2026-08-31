@@ -127,6 +127,11 @@ import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import analysisRoutes from "./routes/analysis.routes";
 
+// Enable JSON serialization of BigInt values (used by Prisma for sizeBytes)
+(BigInt.prototype as any).toJSON = function () {
+  return Number(this);
+};
+
 const app = express();
 
 app.use(helmet());

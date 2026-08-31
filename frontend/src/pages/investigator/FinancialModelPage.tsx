@@ -16,6 +16,7 @@ export const FinancialModelPage: React.FC = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<FinancialPredictResponse | null>(null);
 
   const presets = [
@@ -56,12 +57,12 @@ export const FinancialModelPage: React.FC = () => {
       },
     },
     {
-      label: '✅ Legitimate ATM Withdrawal',
+      label: '✅ Standard ATM Cash Out',
       data: {
-        type: 'DEBIT',
+        type: 'CASH_OUT',
         amount: 10000,
-        oldbalanceOrg: 85000,
-        newbalanceOrig: 75000,
+        oldbalanceOrg: 50000,
+        newbalanceOrig: 40000,
         oldbalanceDest: 0,
         newbalanceDest: 0,
         step: 5,
@@ -71,11 +72,13 @@ export const FinancialModelPage: React.FC = () => {
 
   const handlePredict = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await modelApi.predictFinancial(params);
       setResult(data);
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'Financial model evaluation failed.');
+      setResult(null);
     } finally {
       setLoading(false);
     }
@@ -96,22 +99,24 @@ export const FinancialModelPage: React.FC = () => {
             Financial Fraud & Money Laundering Classifier
           </h1>
           <p className="text-[13px] text-[#605E5C]">
-            Trained on 400,000+ financial transaction vectors (PaySim dataset) to identify account drainage, mule routing, and balance manipulation.
+            Trained on financial transaction vectors (PaySim dataset) to identify account drainage, mule routing, and balance manipulation.
           </p>
         </div>
 
         <div className="flex items-center gap-3 bg-white p-3 border border-[#E1DFDD] rounded-[6px] shadow-xs">
           <div className="text-right">
-            <span className="text-[11px] text-[#605E5C] block">Model Accuracy</span>
-            <span className="font-bold text-[16px] text-[#107C10]">99.99%</span>
-          </div>
-          <div className="h-8 w-[1px] bg-[#E1DFDD]"></div>
-          <div className="text-right">
-            <span className="text-[11px] text-[#605E5C] block">Precision / Recall</span>
-            <span className="font-bold text-[16px] text-[#0078D4]">0.99 / 1.00</span>
+            <span className="text-[11px] text-[#605E5C] block">Model Type</span>
+            <span className="font-bold text-[16px] text-[#0078D4]">Random Forest</span>
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-[#FDE7E9] border border-[#E6A6AA] rounded-[4px] p-4 text-[#A4262C] text-[13px] flex items-center gap-2">
+          <span className="material-symbols-outlined text-[18px]">error</span>
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Transaction Simulator Form */}
       <div className="bg-white border border-[#E1DFDD] rounded-[8px] p-5 shadow-xs flex flex-col gap-4">
@@ -207,14 +212,20 @@ export const FinancialModelPage: React.FC = () => {
             <label className="text-[12px] font-semibold text-[#242424] block mb-1">Time Step (Hour)</label>
             <Input
               type="number"
-              value={params.step || 1}
+              value={params.step}
               onChange={(e) => setParams({ ...params, step: Number(e.target.value) })}
             />
           </div>
 
+          {/* Submit */}
           <div className="flex items-end">
-            <Button variant="primary" onClick={handlePredict} disabled={loading} className="w-full h-9">
-              {loading ? 'Evaluating Model...' : 'Run Fraud Inference'}
+            <Button
+              variant="primary"
+              onClick={handlePredict}
+              disabled={loading}
+              className="w-full h-9"
+            >
+              {loading ? 'Evaluating Model...' : 'Run Fraud Analysis'}
             </Button>
           </div>
         </div>
@@ -223,7 +234,6 @@ export const FinancialModelPage: React.FC = () => {
       {/* Results Section */}
       {result && (
         <div className="flex flex-col gap-6 animate-fadeIn">
-          {/* Main Verdict Card */}
           <div
             className={`border rounded-[8px] p-6 shadow-xs ${
               result.is_fraud
@@ -243,17 +253,18 @@ export const FinancialModelPage: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-[20px] font-bold text-[#242424]">
-                      {result.is_fraud ? 'SUSPICIOUS FRAUD DETECTED' : 'LEGITIMATE TRANSACTION'}
+                      {result.is_fraud ? 'SUSPICIOUS FRAUD DETECTED' : 'NORMAL FINANCIAL TRANSACTION'}
                     </h3>
                     <RiskBadge risk={result.risk_level} size="md" />
                   </div>
                   <p className="text-[13px] text-[#605E5C] mt-1">
-                    Evaluated by {result.model_name} (Accuracy: {typeof result.accuracy === 'number' ? `${(result.accuracy * 100).toFixed(2)}%` : 'Not available'})
+                    {result.is_fraud
+                      ? 'High probability of money mule cash-out or account takeover drainage.'
+                      : 'Transaction matches normal consumer or business payment parameters.'}
                   </p>
                 </div>
               </div>
 
-              {/* Fraud Probability */}
               <div className="bg-white p-4 border border-[#E1DFDD] rounded-[6px] flex items-center gap-6 min-w-[240px] justify-between">
                 <div>
                   <span className="text-[11px] text-[#605E5C] uppercase font-bold block">Fraud Risk</span>
@@ -268,13 +279,13 @@ export const FinancialModelPage: React.FC = () => {
                 <div className="text-right">
                   <span className="text-[11px] text-[#605E5C] uppercase font-bold block">Probability</span>
                   <span className="text-[14px] font-mono text-[#242424]">
-                    {(result.fraud_probability * 100).toFixed(2)}%
+                    {(result.fraud_probability * 100).toFixed(1)}%
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Reasons / Explanation List */}
+            {/* Reasons */}
             {result.reasons && result.reasons.length > 0 && (
               <div className="mt-5 pt-4 border-t border-[rgba(0,0,0,0.08)]">
                 <span className="text-[12px] font-bold text-[#242424] block mb-2">Model Decision Explanations:</span>
@@ -289,27 +300,6 @@ export const FinancialModelPage: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Derived Features & Balance Discrepancy Inspection */}
-          {result.features && (
-            <div className="bg-white border border-[#E1DFDD] rounded-[8px] p-5 shadow-xs">
-              <h3 className="text-[15px] font-bold text-[#242424] mb-1">PaySim Feature Vector & Domain Attributes</h3>
-              <p className="text-[12px] text-[#605E5C] mb-4">Calculated balance errors, ratios, and temporal parameters</p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {Object.entries(result.features).map(([key, val]) => (
-                  <div key={key} className="p-3 bg-[#FAFAFA] border border-[#E1DFDD] rounded-[6px]">
-                    <span className="text-[11px] text-[#605E5C] block truncate" title={key}>
-                      {key}
-                    </span>
-                    <span className="text-[15px] font-mono font-bold text-[#242424] mt-0.5 block">
-                      {typeof val === 'number' ? val.toLocaleString('en-IN') : String(val)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>

@@ -1,9 +1,21 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockReports } from '../../data/mockData';
+import { reportApi } from '../../services/reportApi';
+import { Report } from '../../types';
 
 export const ReporterDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    reportApi.getReports()
+      .then((data) => { if (mounted) setReports(data); })
+      .catch(() => {})
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
 
   const evidenceOptions = [
     {
@@ -45,8 +57,8 @@ export const ReporterDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-6 w-full">
-      {/* Hero Section matching Screen 2 */}
+    <div className="flex flex-col gap-6 w-full text-left">
+      {/* Hero Section */}
       <section className="flex flex-col gap-1 max-w-2xl text-left">
         <h1 className="text-[28px] font-bold text-[#242424] font-['Libre_Franklin',sans-serif] tracking-tight">
           Submit Suspicious Activity
@@ -56,7 +68,7 @@ export const ReporterDashboard: React.FC = () => {
         </p>
       </section>
 
-      {/* Evidence Options Grid matching Screen 2 */}
+      {/* Evidence Options Grid */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {evidenceOptions.map((opt) => (
           <button
@@ -73,7 +85,7 @@ export const ReporterDashboard: React.FC = () => {
         ))}
       </section>
 
-      {/* Privacy Note matching Screen 2 */}
+      {/* Privacy Note */}
       <div className="bg-[#EFF6FC] text-[#005A9E] rounded-[4px] p-4 flex items-center gap-3 border border-[#B4D6F0]">
         <span className="material-symbols-outlined text-[#0078D4] fill-1 text-[22px]">lock</span>
         <p className="text-[13px] text-[#323130] leading-normal">
@@ -81,7 +93,7 @@ export const ReporterDashboard: React.FC = () => {
         </p>
       </div>
 
-      {/* My Recent Reports Section matching Screen 2 */}
+      {/* My Recent Reports Section */}
       <section className="flex flex-col gap-3 mt-4">
         <div className="flex justify-between items-end border-b border-[#E1DFDD] pb-2">
           <h2 className="text-[18px] font-bold text-[#242424]">My Recent Reports</h2>
@@ -89,92 +101,98 @@ export const ReporterDashboard: React.FC = () => {
             onClick={() => navigate('/reports')}
             className="text-[13px] font-semibold text-[#0078D4] hover:underline cursor-pointer"
           >
-            View All ({mockReports.length})
+            View All ({reports.length})
           </button>
         </div>
 
         <div className="bg-white border border-[#E1DFDD] rounded-[4px] overflow-hidden">
-          <table className="w-full text-left border-collapse min-w-full">
-            <thead>
-              <tr className="bg-[#FAFAFA] border-b border-[#E1DFDD]">
-                <th className="py-2.5 px-4 text-[11px] font-semibold text-[#605E5C] uppercase tracking-wider w-36">
-                  Report ID
-                </th>
-                <th className="py-2.5 px-4 text-[11px] font-semibold text-[#605E5C] uppercase tracking-wider w-44">
-                  Date Submitted
-                </th>
-                <th className="py-2.5 px-4 text-[11px] font-semibold text-[#605E5C] uppercase tracking-wider w-36">
-                  Risk Level
-                </th>
-                <th className="py-2.5 px-4 text-[11px] font-semibold text-[#605E5C] uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="py-2.5 px-4 text-[11px] font-semibold text-[#605E5C] uppercase tracking-wider text-right w-24">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E1DFDD] text-[13px]">
-              {mockReports.slice(0, 3).map((report) => (
-                <tr
-                  key={report.id}
-                  onClick={() => navigate(`/reports/${report.id}`)}
-                  className="hover:bg-[#F3F2F1] transition-colors group cursor-pointer"
-                >
-                  <td className="py-3 px-4 font-mono text-[12px] font-medium text-[#242424]">
-                    {report.id}
-                  </td>
-                  <td className="py-3 px-4 text-[#605E5C]">
-                    {new Date(report.reportDate).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </td>
-                  <td className="py-3 px-4">
-                    {report.riskScore >= 80 ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-[#FDE7E9] text-[#D13438] border border-[#E6A6AA] text-[11px] font-bold">
-                        High Risk ({report.riskScore})
-                      </span>
-                    ) : report.riskScore >= 50 ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-[#FFF4CE] text-[#CA5010] border border-[#F4C7A1] text-[11px] font-bold">
-                        Medium Risk
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-[#F1FAF1] text-[#107C10] border border-[#A7D7A7] text-[11px] font-bold">
-                        Safe ({report.riskScore})
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 text-[#242424]">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          report.status === 'INVESTIGATING'
-                            ? 'bg-[#0078D4]'
-                            : report.status === 'RESOLVED'
-                              ? 'bg-[#107C10]'
-                              : 'bg-[#8A8886]'
-                        }`}
-                      />
-                      <span>
-                        {report.status === 'INVESTIGATING'
-                          ? 'Analysis Complete'
-                          : report.status === 'RESOLVED'
-                            ? 'Resolved'
-                            : 'Closed'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <button className="text-[#0078D4] text-[12px] font-semibold hover:underline">
-                      Details →
-                    </button>
-                  </td>
+          {loading ? (
+            <div className="p-8 text-center text-[13px] text-[#605E5C]">
+              <span className="material-symbols-outlined text-[32px] text-[#C8C6C4] block mb-2">hourglass_top</span>
+              Loading reports…
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="p-8 text-center text-[13px] text-[#605E5C]">
+              <span className="material-symbols-outlined text-[32px] text-[#C8C6C4] block mb-2">description</span>
+              No reports submitted yet. Choose an option above to submit suspicious activity.
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse min-w-full">
+              <thead>
+                <tr className="bg-[#FAFAFA] border-b border-[#E1DFDD]">
+                  <th className="py-2.5 px-4 text-[11px] font-semibold text-[#605E5C] uppercase tracking-wider w-36">
+                    Report ID
+                  </th>
+                  <th className="py-2.5 px-4 text-[11px] font-semibold text-[#605E5C] uppercase tracking-wider w-44">
+                    Date Submitted
+                  </th>
+                  <th className="py-2.5 px-4 text-[11px] font-semibold text-[#605E5C] uppercase tracking-wider w-36">
+                    Risk Level
+                  </th>
+                  <th className="py-2.5 px-4 text-[11px] font-semibold text-[#605E5C] uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="py-2.5 px-4 text-[11px] font-semibold text-[#605E5C] uppercase tracking-wider text-right w-24">
+                    Action
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#E1DFDD] text-[13px]">
+                {reports.slice(0, 5).map((report) => (
+                  <tr
+                    key={report.id}
+                    onClick={() => navigate(`/reports/${report.id}`)}
+                    className="hover:bg-[#F3F2F1] transition-colors group cursor-pointer"
+                  >
+                    <td className="py-3 px-4 font-mono text-[12px] font-medium text-[#242424]">
+                      {report.id.substring(0, 8).toUpperCase()}…
+                    </td>
+                    <td className="py-3 px-4 text-[#605E5C]">
+                      {new Date(report.reportDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td className="py-3 px-4">
+                      {report.riskScore >= 70 ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-[#FDE7E9] text-[#D13438] border border-[#E6A6AA] text-[11px] font-bold">
+                          High Risk ({report.riskScore})
+                        </span>
+                      ) : report.riskScore >= 40 ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-[#FFF4CE] text-[#CA5010] border border-[#F4C7A1] text-[11px] font-bold">
+                          Medium Risk ({report.riskScore})
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-[#F1FAF1] text-[#107C10] border border-[#A7D7A7] text-[11px] font-bold">
+                          Safe ({report.riskScore})
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-[#242424]">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            report.status === 'RESOLVED' || report.status === 'ANALYSIS_COMPLETE'
+                              ? 'bg-[#107C10]'
+                              : report.status === 'INVESTIGATING'
+                                ? 'bg-[#0078D4]'
+                                : 'bg-[#8A8886]'
+                          }`}
+                        />
+                        <span>{report.status}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button className="text-[#0078D4] text-[12px] font-semibold hover:underline">
+                        Details →
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
     </div>

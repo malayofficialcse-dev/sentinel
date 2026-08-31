@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockReports } from '../../data/mockData';
+import { reportApi } from '../../services/reportApi';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { RiskBadge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
@@ -8,14 +8,29 @@ import { Button } from '../../components/ui/Button';
 import { Report, RiskLevel } from '../../types';
 
 export const MyReports: React.FC = () => {
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [riskFilter, setRiskFilter] = useState<string>('ALL');
   const navigate = useNavigate();
 
-  const filteredReports = mockReports.filter((r) => {
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+    reportApi.getReports()
+      .then((data) => { if (mounted) setReports(data); })
+      .catch((err) => { if (mounted) setError(err instanceof Error ? err.message : 'Unable to load submitted reports.'); })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  const filteredReports = reports.filter((r) => {
     const matchesSearch =
       r.id.toLowerCase().includes(search.toLowerCase()) ||
-      r.detectedEntities.some((e) => e.value.toLowerCase().includes(search.toLowerCase()));
+      (r.summary && r.summary.toLowerCase().includes(search.toLowerCase())) ||
+      (r.detectedEntities || []).some((e) => e.value.toLowerCase().includes(search.toLowerCase()));
     const matchesRisk = riskFilter === 'ALL' || r.riskLevel === riskFilter;
     return matchesSearch && matchesRisk;
   });
@@ -25,7 +40,7 @@ export const MyReports: React.FC = () => {
       key: 'id',
       header: 'Report ID',
       sortable: true,
-      render: (r) => <span className="font-mono font-medium text-[#0078D4]">{r.id}</span>,
+      render: (r) => <span className="font-mono font-medium text-[#0078D4]">{r.id.substring(0, 8).toUpperCase()}…</span>,
     },
     {
       key: 'reportDate',
@@ -87,11 +102,15 @@ export const MyReports: React.FC = () => {
         </Button>
       </div>
 
+      {error && (
+        <div className="bg-[#FDE7E9] border border-[#E6A6AA] rounded-[4px] p-3 text-[#A4262C] text-[13px]">{error}</div>
+      )}
+
       {/* Filters bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 border border-[#E1DFDD] rounded-[4px]">
         <div className="w-72">
           <Input
-            placeholder="Search report ID or entity..."
+            placeholder="Search report ID or summary..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             leftIcon={<span className="material-symbols-outlined text-[16px]">search</span>}
@@ -112,13 +131,26 @@ export const MyReports: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <DataTable
-        columns={columns}
-        data={filteredReports}
-        keyField="id"
-        onRowClick={(r) => navigate(`/reports/${r.id}`)}
-      />
+      {loading ? (
+        <div className="bg-white border border-[#E1DFDD] rounded-[4px] p-8 text-center text-[13px] text-[#605E5C]">
+          <span className="material-symbols-outlined text-[32px] text-[#C8C6C4] block mb-2">hourglass_top</span>
+          Loading reports…
+        </div>
+      ) : filteredReports.length === 0 ? (
+        <div className="bg-white border border-[#E1DFDD] rounded-[4px] p-8 text-center text-[13px] text-[#605E5C]">
+          <span className="material-symbols-outlined text-[32px] text-[#C8C6C4] block mb-2">folder_open</span>
+          {reports.length === 0
+            ? 'No reports submitted yet. Submit a new report to track threat analysis.'
+            : 'No reports match your search query.'}
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={filteredReports}
+          keyField="id"
+          onRowClick={(r) => navigate(`/reports/${r.id}`)}
+        />
+      )}
     </div>
   );
 };

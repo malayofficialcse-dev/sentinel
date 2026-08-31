@@ -1,56 +1,49 @@
-import { Report, ReportStatus, RiskLevel } from '../types';
-import { mockReports } from '../data/mockData';
-import { delay } from './api';
+import { apiClient } from './api';
+import { Report, RiskLevel, ReportStatus, EvidenceType } from '../types';
 
-let reports = [...mockReports];
+function mapReport(item: any): Report {
+  return {
+    id: item.id,
+    caseId: item.caseId,
+    reporterId: item.reporterId,
+    reportDate: item.reportDate || item.createdAt || new Date().toISOString(),
+    status: (item.status as ReportStatus) || ReportStatus.PROCESSING,
+    riskScore: Number(item.riskScore ?? 0),
+    riskLevel: (item.riskLevel as RiskLevel) || RiskLevel.LOW,
+    evidenceType: (item.evidenceType as EvidenceType) || EvidenceType.DOCUMENT,
+    summary: item.summary || '',
+    detectedEntities: item.detectedEntities || [],
+    riskIndicators: item.riskIndicators || [],
+    recommendations: item.recommendations || [],
+  };
+}
 
 export const reportApi = {
-  async getReports(filters?: { riskLevel?: RiskLevel; status?: ReportStatus; search?: string }): Promise<Report[]> {
-    await delay(200);
-    let list = [...reports];
+  async getReports(filters?: { riskLevel?: string; status?: string; search?: string }): Promise<Report[]> {
+    const params: Record<string, string> = {};
+    if (filters?.status) params.status = filters.status;
+    const res = await apiClient.get('/reports', { params });
+    let list = (Array.isArray(res.data) ? res.data : res.data?.data || []).map(mapReport);
     if (filters?.riskLevel) {
-      list = list.filter((r) => r.riskLevel === filters.riskLevel);
-    }
-    if (filters?.status) {
-      list = list.filter((r) => r.status === filters.status);
+      list = list.filter((r: Report) => r.riskLevel === filters.riskLevel);
     }
     if (filters?.search) {
       const q = filters.search.toLowerCase();
-      list = list.filter(
-        (r) =>
-          r.id.toLowerCase().includes(q) ||
-          r.summary?.toLowerCase().includes(q) ||
-          r.detectedEntities.some((e) => e.value.toLowerCase().includes(q))
+      list = list.filter((r: Report) =>
+        r.id.toLowerCase().includes(q) ||
+        (r.summary || '').toLowerCase().includes(q)
       );
     }
     return list;
   },
 
   async getReportById(id: string): Promise<Report | null> {
-    await delay(150);
-    return reports.find((r) => r.id.toLowerCase() === id.toLowerCase()) || null;
+    const res = await apiClient.get(`/reports/${id}`);
+    return res.data ? mapReport(res.data) : null;
   },
 
   async createReport(data: Partial<Report>): Promise<Report> {
-    await delay(600);
-    const newReport: Report = {
-      id: `SEN-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
-      reportDate: new Date().toISOString(),
-      riskLevel: data.riskLevel || RiskLevel.HIGH,
-      riskScore: data.riskScore || 92,
-      status: ReportStatus.INVESTIGATING,
-      evidenceType: data.evidenceType || (('IMAGE' as any)),
-      summary: data.summary || 'AI Analysis completed. Multiple suspicious indicators identified.',
-      detectedEntities: data.detectedEntities || [],
-      riskIndicators: data.riskIndicators || [],
-      recommendations: data.recommendations || [
-        'Do not send money to any unverified account.',
-        'Preserve the original evidence.',
-        'Report to cybercrime authorities.',
-      ],
-      ...data,
-    };
-    reports.unshift(newReport);
-    return newReport;
+    const res = await apiClient.post('/reports', data);
+    return mapReport(res.data);
   },
 };

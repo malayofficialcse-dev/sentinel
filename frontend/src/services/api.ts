@@ -28,6 +28,3 @@ apiClient.interceptors.response.use(
     return Promise.reject(new Error(message));
   }
 );
-
-// Helper function to simulate API delay in mock mode
-export const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
