@@ -20,6 +20,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Cases', path: '/investigator/cases', icon: 'work', badge: '128' },
     { label: 'Evidence', path: '/investigator/evidence', icon: 'inventory_2' },
     { label: 'Entities', path: '/investigator/entities', icon: 'groups' },
+    { label: 'AI Model Hub', path: '/investigator/models', icon: 'model_training', badge: '3' },
     { label: 'Threat Intelligence', path: '/investigator/threat-intelligence', icon: 'security' },
     { label: 'Financial', path: '/investigator/financial', icon: 'payments' },
     { label: 'Graph', path: '/investigator/graph', icon: 'hub' },

@@ -34,6 +34,12 @@ import { AuditLogs } from '../pages/investigator/AuditLogs';
 import { HelpCenter } from '../pages/investigator/HelpCenter';
 import { SystemStatus } from '../pages/investigator/SystemStatus';
 
+// Specialized AI Model Sandbox Pages
+import { AIModelsHub } from '../pages/investigator/AIModelsHub';
+import { PhishingModelPage } from '../pages/investigator/PhishingModelPage';
+import { FinancialModelPage } from '../pages/investigator/FinancialModelPage';
+import { MalwareModelPage } from '../pages/investigator/MalwareModelPage';
+
 // Admin Pages
 import { UserManagement } from '../pages/admin/UserManagement';
 import { SystemSettings } from '../pages/admin/SystemSettings';
@@ -87,6 +93,13 @@ export const router = createBrowserRouter([
       { path: 'threat-intelligence', element: <ThreatIntelligence /> },
       { path: 'financial', element: <FinancialAnalysis /> },
       { path: 'agents', element: <AIAgents /> },
+      
+      // Individual AI Model Sandbox & Diagnostics Pages
+      { path: 'models', element: <AIModelsHub /> },
+      { path: 'models/phishing', element: <PhishingModelPage /> },
+      { path: 'models/financial', element: <FinancialModelPage /> },
+      { path: 'models/malware', element: <MalwareModelPage /> },
+
       { path: 'findings', element: <Findings /> },
       { path: 'reports', element: <Reports /> },
       { path: 'audit', element: <AuditLogs /> },
