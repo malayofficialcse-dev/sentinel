@@ -99,9 +99,9 @@ export const GraphInvestigation: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Graph Canvas */}
-        <div className="flex-1 relative p-2 bg-[#F5F5F5]">
+        <div className="flex-1 min-w-0 relative p-2 bg-[#F5F5F5] h-full">
           <GraphViewer
             entities={entities}
             relationships={relationships}

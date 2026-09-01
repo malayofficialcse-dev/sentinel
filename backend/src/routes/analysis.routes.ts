@@ -16,7 +16,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 // Cases
 router.post("/cases", createCase);
 router.get("/cases", listCases);
-router.post("/cases/:caseId/evidence", upload.single("file"), addEvidence);
+router.post("/cases/:caseId/evidence", upload.any(), addEvidence);
 router.post("/cases/:caseId/investigate", investigatePersistedCase);
 router.get("/cases/:caseId/:resource", getCaseResource);
 router.get("/cases/:caseId", getCase);

@@ -17,40 +17,63 @@ export const NewReport: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [notes, setNotes] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [progressStatus, setProgressStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true); setError(null);
+    setSubmitting(true);
+    setError(null);
+    setProgressStatus('Creating case record…');
     try {
-      const created = await caseApi.createCase(`${activeType} evidence submission`, notes);
-      if (file) await evidenceApi.uploadFile(created.id, file);
-      else await caseApi.investigate(created.id, { extracted_text: [url, message, amount, paymentMethod, notes].filter(Boolean).join('\n'), entities: [], transactions: [], qr_codes: [] });
+      const caseTitle = files.length > 1
+        ? `${activeType} Multi-Evidence Submission (${files.length} items)`
+        : `${activeType} Evidence Submission`;
+
+      const created = await caseApi.createCase(caseTitle, notes);
+
+      if (files.length > 0) {
+        setProgressStatus(`Uploading and performing AI OCR & graph correlation across ${files.length} evidence file(s)…`);
+        await evidenceApi.uploadFiles(created.id, files);
+      } else {
+        setProgressStatus('Running AI investigation pipeline on text context…');
+        await caseApi.investigate(created.id, {
+          extracted_text: [url, message, amount ? `Amount: ₹${amount}` : '', paymentMethod ? `Payment Method: ${paymentMethod}` : '', notes].filter(Boolean).join('\n'),
+          entities: [],
+          transactions: [],
+          qr_codes: []
+        });
+      }
+
       navigate(`/investigator/cases/${created.id}`);
-    } catch (err) { setError(err instanceof Error ? err.message : 'Backend unavailable'); }
-    finally { setSubmitting(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Backend unavailable');
+    } finally {
+      setSubmitting(false);
+      setProgressStatus(null);
+    }
   };
 
   return (
-    <div className="max-w-3xl mx-auto w-full flex flex-col gap-6 text-left">
-      <div className="border-b border-[#E1DFDD] pb-4">
-        <h1 className="text-[24px] font-bold text-[#242424] font-['Libre_Franklin',sans-serif]">
+    <div className="max-w-3xl mx-auto w-full flex flex-col gap-6 text-left py-6 px-4">
+      <div className="border-b border-[var(--border)] pb-4">
+        <h1 className="text-[24px] font-bold text-[var(--text-primary)] font-['Libre_Franklin',sans-serif]">
           Submit Suspicious Evidence
         </h1>
-        <p className="text-[14px] text-[#605E5C] mt-1">
-          Select the type of suspicious content you encountered. Sentinel AI will extract entities and assess risks.
+        <p className="text-[14px] text-[var(--text-secondary)] mt-1">
+          Select the type of content you encountered. Upload single or multiple images/documents simultaneously. Sentinel AI will extract all IOCs, correlate transactions, and map entity relationships.
         </p>
       </div>
 
       {/* Type Selector Tabs */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {[
-          { id: 'IMAGE', label: 'Image', icon: 'image' },
-          { id: 'PDF', label: 'PDF File', icon: 'picture_as_pdf' },
+          { id: 'IMAGE', label: 'Images', icon: 'collections' },
+          { id: 'PDF', label: 'PDF Files', icon: 'picture_as_pdf' },
           { id: 'URL', label: 'Website Link', icon: 'link' },
           { id: 'MESSAGE', label: 'Text Msg', icon: 'chat' },
           { id: 'QR_CODE', label: 'QR Code', icon: 'qr_code_scanner' },
@@ -62,8 +85,8 @@ export const NewReport: React.FC = () => {
             onClick={() => setActiveType(tab.id)}
             className={`p-3 rounded-[4px] border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
               activeType === tab.id
-                ? 'bg-[#EFF6FC] border-[#0078D4] text-[#0078D4] font-bold shadow-xs'
-                : 'bg-white border-[#E1DFDD] text-[#605E5C] hover:bg-[#FAFAFA] hover:text-[#242424]'
+                ? 'bg-[var(--info-bg)] border-[var(--primary)] text-[var(--primary)] font-bold shadow-xs'
+                : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
             }`}
           >
             <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
@@ -72,11 +95,11 @@ export const NewReport: React.FC = () => {
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white border border-[#E1DFDD] rounded-[4px] p-6 flex flex-col gap-6 shadow-xs">
+      <form onSubmit={handleSubmit} className="bg-[var(--surface)] border border-[var(--border)] rounded-[4px] p-6 flex flex-col gap-6 shadow-xs transition-colors">
         {/* Dynamic Evidence Input Section */}
         {activeType === 'URL' ? (
           <div className="flex flex-col gap-2">
-            <h3 className="text-[14px] font-bold text-[#242424]">Suspicious URL</h3>
+            <h3 className="text-[14px] font-bold text-[var(--text-primary)]">Suspicious URL</h3>
             <Input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -88,7 +111,7 @@ export const NewReport: React.FC = () => {
           </div>
         ) : activeType === 'MESSAGE' ? (
           <div className="flex flex-col gap-2">
-            <h3 className="text-[14px] font-bold text-[#242424]">Suspicious Message Text</h3>
+            <h3 className="text-[14px] font-bold text-[var(--text-primary)]">Suspicious Message Text</h3>
             <Textarea
               rows={4}
               value={message}
@@ -100,17 +123,27 @@ export const NewReport: React.FC = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <h3 className="text-[14px] font-bold text-[#242424]">Upload Evidence File</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[14px] font-bold text-[var(--text-primary)]">
+                Upload Evidence Files (Multiple Supported)
+              </h3>
+              {files.length > 0 && (
+                <span className="text-[12px] font-semibold text-[var(--primary)] bg-[var(--info-bg)] border border-[var(--info-border)] px-2 py-0.5 rounded">
+                  {files.length} file{files.length > 1 ? 's' : ''} ready
+                </span>
+              )}
+            </div>
             <FileUploader
-              onFileSelect={(f) => setFile(f)}
-              acceptedFormats={activeType === 'PDF' ? '.pdf' : '.png, .jpg, .jpeg, .png'}
+              multiple={true}
+              onFilesSelect={(fList) => setFiles(fList)}
+              acceptedFormats={activeType === 'PDF' ? '.pdf' : '.png, .jpg, .jpeg, .webp, .pdf, .txt'}
             />
           </div>
         )}
 
         {/* Optional Context Inputs */}
-        <div className="border-t border-[#E1DFDD] pt-4 flex flex-col gap-4">
-          <span className="text-[13px] font-semibold text-[#242424]">Additional Context (Optional)</span>
+        <div className="border-t border-[var(--border)] pt-4 flex flex-col gap-4">
+          <span className="text-[13px] font-semibold text-[var(--text-primary)]">Additional Context (Optional)</span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Approximate Amount (if asked to pay)"
@@ -135,20 +168,36 @@ export const NewReport: React.FC = () => {
         </div>
 
         {/* Privacy Card */}
-        <div className="bg-[#FAFAFA] border border-[#E1DFDD] rounded-[4px] p-3 flex items-center gap-2 text-[12px] text-[#605E5C]">
-          <span className="material-symbols-outlined text-[#0078D4] text-[18px]">security</span>
-          <span>Your submission is analyzed with privacy-preserving NLP and is never shared publicly.</span>
+        <div className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[4px] p-3 flex items-center gap-2 text-[12px] text-[var(--text-secondary)] transition-colors">
+          <span className="material-symbols-outlined text-[var(--primary)] text-[18px]">security</span>
+          <span>Your submission is analyzed with privacy-preserving OCR & AI entity correlation and is never shared publicly.</span>
         </div>
 
         {/* Action Button */}
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="secondary" size="md" type="button" onClick={() => navigate('/reporter')}>
-            Cancel
-          </Button>
-          {error && <p className="text-[12px] text-[#A4262C] mr-auto">{error}</p>}
-          <Button variant="primary" size="md" type="submit" disabled={submitting} leftIcon={<span className="material-symbols-outlined text-[16px]">analytics</span>}>
-            {submitting ? 'Submitting…' : 'Analyze Evidence'}
-          </Button>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          {error ? (
+            <p className="text-[12px] text-[var(--danger)] bg-[var(--danger-bg)] border border-[var(--danger-border)] px-3 py-1.5 rounded-[4px]">{error}</p>
+          ) : progressStatus ? (
+            <p className="text-[12px] text-[var(--primary)] flex items-center gap-1.5 font-medium animate-pulse">
+              <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+              {progressStatus}
+            </p>
+          ) : <div />}
+
+          <div className="flex items-center gap-3 ml-auto">
+            <Button variant="secondary" size="md" type="button" onClick={() => navigate('/reporter')}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              type="submit"
+              disabled={submitting}
+              leftIcon={<span className="material-symbols-outlined text-[16px]">analytics</span>}
+            >
+              {submitting ? (files.length > 1 ? `Analyzing ${files.length} Evidence Files…` : 'Analyzing…') : 'Analyze Evidence'}
+            </Button>
+          </div>
         </div>
       </form>
     </div>

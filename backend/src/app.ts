@@ -126,6 +126,9 @@ import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import analysisRoutes from "./routes/analysis.routes";
+import authRoutes from "./modules/auth/auth.routes";
+import userRoutes from "./modules/users/user.routes";
+import { errorMiddleware, notFoundMiddleware } from "./middleware/error.middleware";
 
 // Enable JSON serialization of BigInt values (used by Prisma for sizeBytes)
 (BigInt.prototype as any).toJSON = function () {
@@ -164,6 +167,11 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/users", userRoutes);
 app.use("/api/v1", analysisRoutes);
+
+app.use(notFoundMiddleware);
+app.use(errorMiddleware);
 
 export default app;

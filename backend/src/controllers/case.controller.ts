@@ -23,124 +23,240 @@ export async function listCases(_req: Request, res: Response) {
 }
 
 export async function addEvidence(req: Request, res: Response) {
-  const file = (req as Request & { file?: Express.Multer.File }).file;
-  if (!file) return res.status(400).json({ success: false, error: "FILE_REQUIRED", message: "An evidence file is required." });
+  let rawFiles: Express.Multer.File[] = [];
+  if (Array.isArray(req.files)) {
+    rawFiles = req.files;
+  } else if (req.files && typeof req.files === "object") {
+    rawFiles = Object.values(req.files).flat() as Express.Multer.File[];
+  } else if (req.file) {
+    rawFiles = [req.file];
+  }
+
+  if (!rawFiles || rawFiles.length === 0) {
+    return res.status(400).json({ success: false, error: "FILE_REQUIRED", message: "At least one evidence file is required." });
+  }
   const caseId = String(req.params.caseId);
   try {
-    const result = await aiClient.analyzeEvidence(file, caseId) as Record<string, any>;
-    const digest = crypto.createHash("sha256").update(file.buffer).digest("hex");
-    const persisted = await prisma.$transaction(async (tx) => {
-      const evidence = await tx.evidence.create({ data: { caseId, type: evidenceType(file.mimetype), fileName: file.originalname, storageKey: digest, mimeType: file.mimetype, sizeBytes: BigInt(file.size), sha256: digest, status: "ANALYZED", manualData: { extracted_text: result.extracted_text || "", qr_codes: result.qr_codes || [], warnings: result.extraction_warnings || [] } } });
-      // 1. Persist entities from extraction and graph analysis
-      const allEntityItems = [...(result.entities || []), ...(result.graph?.nodes || []).map((n: any) => ({ entity_type: n.type, value: n.value, normalized_value: n.value, confidence: n.metadata?.confidence || 0.95 }))];
-      const entityRows: Array<{ id: string; type: string; value: string }> = [];
-      const seenEntities = new Set<string>();
+    const results: any[] = [];
+    const persistedEvidences: any[] = [];
 
-      for (const item of allEntityItems) {
-        const type = String(item.entity_type || item.type || "UNKNOWN").toUpperCase();
-        const value = String(item.normalized_value || item.value || "").trim();
-        if (!value) continue;
-        const key = `${type}:${value}`.toLowerCase();
-        if (seenEntities.has(key)) continue;
-        seenEntities.add(key);
+    for (const file of rawFiles) {
+      const result = await aiClient.analyzeEvidence(file, caseId) as Record<string, any>;
+      results.push(result);
+      const digest = crypto.createHash("sha256").update(file.buffer).digest("hex");
 
-        const entity = await tx.entity.upsert({
-          where: { caseId_type_canonicalValue: { caseId, type, canonicalValue: value } },
-          create: { caseId, type, canonicalValue: value, displayName: String(item.value || value) },
-          update: { displayName: String(item.value || value) }
-        });
-        await tx.extractedEntity.create({
-          data: { evidenceId: evidence.id, entityId: entity.id, type, rawValue: String(item.value || value), normalizedValue: value, confidence: Number(item.confidence || 0.95) }
-        });
-        entityRows.push({ id: entity.id, type, value });
-      }
-
-      // 2. Persist transactions
-      for (const item of result.transactions || []) {
-        await tx.transaction.create({
+      const persisted = await prisma.$transaction(async (tx) => {
+        const evidence = await tx.evidence.create({
           data: {
             caseId,
-            sender: String(item.sender || "Source Account"),
-            receiver: String(item.receiver || "Beneficiary Account"),
-            amount: Number(item.amount || 0),
-            currency: String(item.currency || "INR"),
-            metadata: item
+            type: evidenceType(file.mimetype),
+            fileName: file.originalname,
+            storageKey: digest,
+            mimeType: file.mimetype,
+            sizeBytes: BigInt(file.size),
+            sha256: digest,
+            status: "ANALYZED",
+            manualData: {
+              extracted_text: result.extracted_text || "",
+              qr_codes: result.qr_codes || [],
+              warnings: result.extraction_warnings || []
+            }
           }
         });
-      }
 
-      // 3. Persist findings from all sources
-      const rawFindings: Array<{ source?: string; finding_type?: string; type?: string; description?: string; message?: string; severity?: string; risk_level?: string; confidence?: number }> = [
-        ...(result.threat_indicators || []),
-        ...(result.financial_findings || []),
-        ...(result.graph?.findings || []),
-        ...(result.investigation?.findings || []),
-      ];
+        // 1. Persist entities from extraction and graph analysis
+        const allEntityItems = [
+          ...(result.entities || []),
+          ...(result.graph?.nodes || []).map((n: any) => ({
+            entity_type: n.type,
+            value: n.value,
+            normalized_value: n.value,
+            confidence: n.metadata?.confidence || 0.95
+          }))
+        ];
+        const entityRows: Array<{ id: string; type: string; value: string }> = [];
+        const seenEntities = new Set<string>();
 
-      // Add forensic entity findings if transactions or payment identifiers were extracted
-      if ((result.transactions || []).length > 0) {
-        for (const txn of result.transactions) {
-          rawFindings.push({
-            source: "FINANCIAL_OCR",
-            type: "TRANSACTION_DETECTED",
-            description: `Extracted financial transaction of ₹${Number(txn.amount || 0).toLocaleString()} ${txn.currency || "INR"} directed to ${txn.receiver || "beneficiary"}.`,
-            severity: Number(txn.amount || 0) > 50000 ? "HIGH" : "MEDIUM",
-            confidence: 0.95
+        for (const item of allEntityItems) {
+          const type = String(item.entity_type || item.type || "UNKNOWN").toUpperCase();
+          const value = String(item.normalized_value || item.value || "").trim();
+          if (!value) continue;
+          const key = `${type}:${value}`.toLowerCase();
+          if (seenEntities.has(key)) continue;
+          seenEntities.add(key);
+
+          const entity = await tx.entity.upsert({
+            where: { caseId_type_canonicalValue: { caseId, type, canonicalValue: value } },
+            create: { caseId, type, canonicalValue: value, displayName: String(item.value || value) },
+            update: { displayName: String(item.value || value) }
+          });
+          await tx.extractedEntity.create({
+            data: {
+              evidenceId: evidence.id,
+              entityId: entity.id,
+              type,
+              rawValue: String(item.value || value),
+              normalizedValue: value,
+              confidence: Number(item.confidence || 0.95)
+            }
+          });
+          entityRows.push({ id: entity.id, type, value });
+        }
+
+        // 2. Persist transactions
+        for (const item of result.transactions || []) {
+          await tx.transaction.create({
+            data: {
+              caseId,
+              sender: String(item.sender || "Source Account"),
+              receiver: String(item.receiver || "Beneficiary Account"),
+              amount: Number(item.amount || 0),
+              currency: String(item.currency || "INR"),
+              metadata: item
+            }
           });
         }
-      }
 
-      for (const ent of result.entities || []) {
-        if (ent.entity_type === "UPI") {
-          rawFindings.push({
-            source: "OCR_ENTITY_EXTRACTION",
-            type: "UPI_IDENTIFIER_EXTRACTED",
-            description: `Identified Virtual Payment Address (UPI ID): ${ent.value}`,
-            severity: "MEDIUM",
-            confidence: Number(ent.confidence || 0.95)
-          });
-        }
-      }
+        // 3. Persist findings from all sources
+        const rawFindings: Array<{ source?: string; finding_type?: string; type?: string; description?: string; message?: string; severity?: string; risk_level?: string; confidence?: number }> = [
+          ...(result.threat_indicators || []),
+          ...(result.financial_findings || []),
+          ...(result.graph?.findings || []),
+          ...(result.investigation?.findings || []),
+        ];
 
-      for (const item of rawFindings) {
-        await tx.finding.create({
-          data: {
-            caseId,
-            category: String(item.source || item.finding_type || "ANALYSIS"),
-            title: String(item.type || item.finding_type || "Analysis finding"),
-            description: String(item.description || item.message || "Model or rule output recorded."),
-            severity: severity(item.severity || item.risk_level || "MEDIUM"),
-            confidence: Number(item.confidence ?? 0.9),
-            evidenceRefs: [evidence.id],
-            analysis: item
+        if ((result.transactions || []).length > 0) {
+          for (const txn of result.transactions) {
+            rawFindings.push({
+              source: "FINANCIAL_OCR",
+              type: "TRANSACTION_DETECTED",
+              description: `Extracted financial transaction of ₹${Number(txn.amount || 0).toLocaleString()} ${txn.currency || "INR"} directed to ${txn.receiver || "beneficiary"}.`,
+              severity: Number(txn.amount || 0) > 50000 ? "HIGH" : "MEDIUM",
+              confidence: 0.95
+            });
           }
-        });
-      }
+        }
 
-      // 4. Persist graph relationship edges
-      for (const edge of result.graph?.edges || []) {
+        for (const ent of result.entities || []) {
+          if (ent.entity_type === "UPI" || ent.entity_type === "VPA") {
+            rawFindings.push({
+              source: "OCR_ENTITY_EXTRACTION",
+              type: "PAYMENT_HANDLE_EXTRACTED",
+              description: `Identified Virtual Payment Address (UPI/VPA): ${ent.value}`,
+              severity: "MEDIUM",
+              confidence: Number(ent.confidence || 0.95)
+            });
+          }
+        }
+
+        for (const item of rawFindings) {
+          await tx.finding.create({
+            data: {
+              caseId,
+              category: String(item.source || item.finding_type || "ANALYSIS"),
+              title: String(item.type || item.finding_type || "Analysis finding"),
+              description: String(item.description || item.message || "Model or rule output recorded."),
+              severity: severity(item.severity || item.risk_level || "MEDIUM"),
+              confidence: Number(item.confidence ?? 0.9),
+              evidenceRefs: [evidence.id],
+              analysis: item
+            }
+          });
+        }
+
+        // 4. Persist graph relationship edges
+        for (const edge of result.graph?.edges || []) {
+          const sourceStr = String(edge.source || "").toLowerCase();
+          const targetStr = String(edge.target || "").toLowerCase();
+          const source = entityRows.find((e) => `${e.type}:${e.value}`.toLowerCase() === sourceStr || e.value.toLowerCase() === sourceStr);
+          const target = entityRows.find((e) => `${e.type}:${e.value}`.toLowerCase() === targetStr || e.value.toLowerCase() === targetStr);
+          if (source && target && source.id !== target.id) {
+            await tx.relationship.upsert({
+              where: { caseId_sourceId_targetId_type: { caseId, sourceId: source.id, targetId: target.id, type: String(edge.type || "RELATED_TO") } },
+              create: { caseId, sourceId: source.id, targetId: target.id, type: String(edge.type || "RELATED_TO"), confidence: Number(edge.confidence || 0.9), evidenceId: evidence.id },
+              update: { confidence: Number(edge.confidence || 0.9) }
+            });
+          }
+        }
+        return evidence;
+      });
+      persistedEvidences.push({ ...persisted, sizeBytes: Number(persisted.sizeBytes) });
+    }
+
+    // Run unified multi-evidence cross-correlation pipeline for the whole case
+    const updatedCase = await prisma.case.findUnique({
+      where: { id: caseId },
+      include: { evidence: true, entities: true, transactions: true, findings: true }
+    });
+
+    const combinedText = (updatedCase?.evidence || []).map((e: any) => (e.manualData as any)?.extracted_text || "").filter(Boolean).join("\n\n");
+    const unifiedResult = await aiClient.runPipeline({
+      case_id: caseId,
+      extracted_text: combinedText,
+      evidence: (updatedCase?.evidence || []).map((e) => ({ id: e.id, fileName: e.fileName, mime_type: e.mimeType })),
+      entities: (updatedCase?.entities || []).map((ent) => ({ entity_type: ent.type, value: ent.canonicalValue })),
+      transactions: (updatedCase?.transactions || []).map((t) => ({
+        amount: Number(t.amount),
+        currency: t.currency,
+        sender: t.sender,
+        receiver: t.receiver
+      }))
+    }) as Record<string, any>;
+
+    await prisma.$transaction(async (tx) => {
+      // Connect all cross-evidence relationship edges discovered by AI graph engine
+      for (const edge of unifiedResult.graph?.edges || []) {
         const sourceStr = String(edge.source || "").toLowerCase();
         const targetStr = String(edge.target || "").toLowerCase();
-        const source = entityRows.find((e) => `${e.type}:${e.value}`.toLowerCase() === sourceStr || e.value.toLowerCase() === sourceStr);
-        const target = entityRows.find((e) => `${e.type}:${e.value}`.toLowerCase() === targetStr || e.value.toLowerCase() === targetStr);
-        if (source && target && source.id !== target.id) {
+        const sourceEnt = updatedCase?.entities.find(e => `${e.type}:${e.canonicalValue}`.toLowerCase() === sourceStr || e.canonicalValue.toLowerCase() === sourceStr);
+        const targetEnt = updatedCase?.entities.find(e => `${e.type}:${e.canonicalValue}`.toLowerCase() === targetStr || e.canonicalValue.toLowerCase() === targetStr);
+        if (sourceEnt && targetEnt && sourceEnt.id !== targetEnt.id) {
           await tx.relationship.upsert({
-            where: { caseId_sourceId_targetId_type: { caseId, sourceId: source.id, targetId: target.id, type: String(edge.type || "RELATED_TO") } },
-            create: { caseId, sourceId: source.id, targetId: target.id, type: String(edge.type || "RELATED_TO"), confidence: Number(edge.confidence || 0.9), evidenceId: evidence.id },
+            where: { caseId_sourceId_targetId_type: { caseId, sourceId: sourceEnt.id, targetId: targetEnt.id, type: String(edge.type || "RELATED_TO").toUpperCase() } },
+            create: { caseId, sourceId: sourceEnt.id, targetId: targetEnt.id, type: String(edge.type || "RELATED_TO").toUpperCase(), confidence: Number(edge.confidence || 0.9) },
             update: { confidence: Number(edge.confidence || 0.9) }
           });
         }
       }
-      if (result.investigation) await tx.investigation.create({ data: { caseId, status: "COMPLETE", narrative: String(result.investigation.summary || ""), result: result.investigation } });
-      if (result.risk) await tx.riskScore.create({ data: { caseId, score: Number(result.risk.score || 0), severity: severity(result.risk.level), factors: result.risk.factors || {}, explanation: `Risk score ${Number(result.risk.score || 0)}/100 from pipeline outputs.`, evidenceRefs: [evidence.id] } });
-      return evidence;
+
+      if (unifiedResult.investigation) {
+        await tx.investigation.create({
+          data: {
+            caseId,
+            status: "COMPLETE",
+            narrative: String(unifiedResult.investigation.summary || ""),
+            result: unifiedResult.investigation
+          }
+        });
+      }
+
+      if (unifiedResult.risk) {
+        await tx.riskScore.create({
+          data: {
+            caseId,
+            score: Number(unifiedResult.risk.score || 0),
+            severity: severity(unifiedResult.risk.level),
+            factors: unifiedResult.risk.factors || {},
+            explanation: `Risk score ${Number(unifiedResult.risk.score || 0)}/100 from multi-evidence AI synthesis.`,
+            evidenceRefs: persistedEvidences.map(e => e.id)
+          }
+        });
+      }
     });
+
     return res.status(201).json({
       success: true,
-      evidence: { ...persisted, sizeBytes: Number(persisted.sizeBytes) },
-      analysis: result
+      evidence: persistedEvidences.length === 1 ? persistedEvidences[0] : persistedEvidences,
+      evidences: persistedEvidences,
+      analysis: unifiedResult || results[0]
     });
-  } catch (error) { return res.status(502).json({ success: false, error: "INVESTIGATION_PERSISTENCE_FAILED", message: error instanceof Error ? error.message : "Evidence processing failed" }); }
+  } catch (error) {
+    return res.status(502).json({
+      success: false,
+      error: "INVESTIGATION_PERSISTENCE_FAILED",
+      message: error instanceof Error ? error.message : "Evidence processing failed"
+    });
+  }
 }
 
 export async function getCase(req: Request, res: Response) {
@@ -166,10 +282,57 @@ export async function getCase(req: Request, res: Response) {
 export async function investigateCase(req: Request, res: Response) {
   const caseId = String(req.params.caseId);
   try {
-    const result = await aiClient.runPipeline({ ...req.body, case_id: caseId }) as Record<string, any>;
+    const existingCase = await prisma.case.findUnique({
+      where: { id: caseId },
+      include: {
+        evidence: true,
+        entities: true,
+        transactions: true,
+        findings: true
+      }
+    });
+
+    const combinedText = [
+      req.body?.extracted_text || "",
+      ...(existingCase?.evidence || []).map((e: any) => (e.manualData as any)?.extracted_text || "")
+    ].filter(Boolean).join("\n\n");
+
+    const pipelinePayload = {
+      case_id: caseId,
+      extracted_text: combinedText,
+      evidence: (existingCase?.evidence || []).map((e) => ({ id: e.id, fileName: e.fileName, mime_type: e.mimeType })),
+      entities: (existingCase?.entities || []).map((ent) => ({ entity_type: ent.type, value: ent.canonicalValue })),
+      transactions: (existingCase?.transactions || []).map((t) => ({
+        amount: Number(t.amount),
+        currency: t.currency,
+        sender: t.sender,
+        receiver: t.receiver
+      })),
+      ...req.body
+    };
+
+    const result = await aiClient.runPipeline(pipelinePayload) as Record<string, any>;
     const saved = await prisma.$transaction(async (tx) => {
       const investigation = result.investigation ? await tx.investigation.create({ data: { caseId, status: "COMPLETE", narrative: String(result.investigation.summary || ""), result: result.investigation } }) : null;
       const risk = result.risk ? await tx.riskScore.create({ data: { caseId, score: Number(result.risk.score || 0), severity: severity(result.risk.level), factors: result.risk.factors || {}, explanation: `Risk score ${Number(result.risk.score || 0)}/100 from pipeline outputs.`, evidenceRefs: [] } }) : null;
+
+      // Also persist any graph relationships discovered
+      for (const edge of result.graph?.edges || []) {
+        const sourceEnt = existingCase?.entities.find(e => e.canonicalValue.toLowerCase() === String(edge.source).toLowerCase() || e.id === edge.source);
+        const targetEnt = existingCase?.entities.find(e => e.canonicalValue.toLowerCase() === String(edge.target).toLowerCase() || e.id === edge.target);
+        if (sourceEnt && targetEnt && sourceEnt.id !== targetEnt.id) {
+          await tx.relationship.create({
+            data: {
+              caseId,
+              sourceId: sourceEnt.id,
+              targetId: targetEnt.id,
+              type: String(edge.type || "ASSOCIATED_WITH").toUpperCase(),
+              confidence: Number(edge.confidence || 0.85)
+            }
+          });
+        }
+      }
+
       return { investigation, risk };
     });
     return res.json({ success: true, analysis: result, persisted: saved });

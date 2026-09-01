@@ -22,5 +22,12 @@ export const evidenceApi = {
     const res = await apiClient.post(`/cases/${caseId}/evidence`, form, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 });
     return { evidence: mapEvidence(res.data.evidence), analysis: res.data.analysis };
   },
+  async uploadFiles(caseId: string, files: File[]): Promise<{ evidence: Evidence[]; analysis: Record<string, any> }> {
+    const form = new FormData();
+    files.forEach((f) => form.append('files', f));
+    const res = await apiClient.post(`/cases/${caseId}/evidence`, form, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 180000 });
+    const evList = Array.isArray(res.data.evidences) ? res.data.evidences : Array.isArray(res.data.evidence) ? res.data.evidence : [res.data.evidence];
+    return { evidence: evList.filter(Boolean).map(mapEvidence), analysis: res.data.analysis };
+  },
   async uploadEvidence(_newEvidence: Partial<Evidence>): Promise<Evidence> { throw new Error('Use uploadFile(caseId, file) to submit real evidence.'); },
 };

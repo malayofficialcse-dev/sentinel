@@ -24,12 +24,13 @@ class EntityExtractor:
         ("EMAIL", re.compile(r"(?<![\w.+-])[\w.+-]+@[\w-]+(?:\.[\w-]+)+", re.I)),
         ("IP", re.compile(r"(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])")),
         ("IFSC", re.compile(r"\b[A-Z]{4}0[A-Z0-9]{6}\b", re.I)),
-        ("PHONE", re.compile(r"(?<!\d)(?:\+?91[ -]?)?[6-9]\d{9}(?!\d)")),
+        ("PHONE", re.compile(r"(?<!\d)(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}(?!\d)")),
         ("UPI", re.compile(r"\b[a-zA-Z0-9][\w.\-_]{1,50}@[a-zA-Z][\w.\-_]{1,30}\b")),
-        ("BANK_ACCOUNT", re.compile(r"(?i)(?:account|a/c|acct|bank\s*a/c)[\s:#-]*([0-9Xx*]{9,18})")),
-        ("TRANSACTION_ID", re.compile(r"(?i)(?:utr|upi\s*ref|ref\s*no|txn|transaction|reference|order\s*id)[\s:#-]*([A-Za-z0-9-]{8,35})")),
+        ("VPA", re.compile(r"(?i)(?:vpa|upi\s*id)[\s:#-]*([a-zA-Z0-9@._-]{4,50})")),
+        ("BANK_ACCOUNT", re.compile(r"(?i)(?:account|a/c|acct|bank\s*a/c)[\s:#-]*([0-9Xx*]{4,18})")),
+        ("TRANSACTION_ID", re.compile(r"(?i)(?:utr|upi\s*ref(?:erence)?(?:\s*no)?|ref\s*no|txn|transaction|reference|order\s*id)[\s:#-]*([A-Za-z0-9-]{8,35})")),
     )
-    _amount = re.compile(r"(?i)(?:₹|rs\.?|inr|paid|received|amount|amt)[\s:.]*([\d,]+(?:\.\d{1,2})?)|\b([\d,]+(?:\.\d{1,2})?)\s*(?:inr|rupees|rs)\b")
+    _amount = re.compile(r"(?i)(?:₹|rs\.?|inr)\s*([\d,]+(?:\.\d{1,2})?)|(?:credited|debited|amount|amt|paid|received)[\s:.]*(?:₹|rs\.?|inr)?\s*([\d,]+(?:\.\d{1,2})?)|\b([\d,]+(?:\.\d{1,2})?)\s*(?:inr|rupees|rs)\b")
     _date = re.compile(r"\b(?:\d{1,2}[/-]\d{1,2}[/-](?:\d{2}|\d{4})|\d{4}[/-]\d{1,2}[/-]\d{1,2})\b")
     _name_pattern = re.compile(r"(?i)(?:paid\s+to|transfer\s+to|sent\s+to|to\s*[:\s]+|beneficiary\s*[:\s]+|receiver\s*[:\s]+)([A-Za-z\s.]{3,35})")
 
@@ -64,14 +65,21 @@ class EntityExtractor:
         for match in self._amount.finditer(cleaned_text):
             raw = next((group for group in match.groups() if group), "")
             if raw and any(c.isdigit() for c in raw):
-                add("AMOUNT", raw, 0.95)
+                clean_num = raw.replace(",", "")
+                # Skip false positives like phone numbers or year dates
+                try:
+                    num_float = float(clean_num)
+                    if 1 <= num_float <= 1000000000 and len(clean_num.split(".")[0]) <= 9:
+                        add("AMOUNT", raw, 0.95)
+                except ValueError:
+                    pass
 
         for match in self._date.finditer(cleaned_text):
             add("DATE", match.group(0), 0.95)
 
         for match in self._name_pattern.finditer(cleaned_text):
             name = match.group(1).strip()
-            if len(name) > 3 and not any(w in name.lower() for w in ["bank", "account", "success", "failed", "pending", "payment"]):
+            if len(name) > 3 and not any(w in name.lower() for w in ["bank", "account", "success", "failed", "pending", "payment", "vpa"]):
                 add("PERSON", name, 0.90)
 
         transactions = self.extract_transactions(cleaned_text, entities)
@@ -82,7 +90,7 @@ class EntityExtractor:
         lines = [line.strip() for line in (text or "").splitlines() if line.strip()]
 
         amounts = [e for e in entities if e["entity_type"] == "AMOUNT"]
-        receivers = [e for e in entities if e["entity_type"] in {"UPI", "BANK_ACCOUNT", "PERSON", "PHONE"}]
+        receivers = [e for e in entities if e["entity_type"] in {"UPI", "VPA", "BANK_ACCOUNT", "PERSON", "PHONE"}]
         references = [e for e in entities if e["entity_type"] == "TRANSACTION_ID"]
 
         # Strategy 1: Line-by-line matching

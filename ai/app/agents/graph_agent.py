@@ -54,40 +54,70 @@ class GraphAgent(BaseAgent):
                     "evidence_id": case_id
                 })
 
-            # 2. Correlate co-occurring entities within the same evidence
-            upis = [e for e in entities if e.get("entity_type") == "UPI"]
+            # 2. Correlate co-occurring entities within the evidence and across files
+            upis = [e for e in entities if e.get("entity_type") in {"UPI", "VPA"}]
             phones = [e for e in entities if e.get("entity_type") == "PHONE"]
             persons = [e for e in entities if e.get("entity_type") == "PERSON"]
             bank_accs = [e for e in entities if e.get("entity_type") == "BANK_ACCOUNT"]
             ifscs = [e for e in entities if e.get("entity_type") == "IFSC"]
+            txn_ids = [e for e in entities if e.get("entity_type") == "TRANSACTION_ID"]
+            urls = [e for e in entities if e.get("entity_type") in {"URL", "DOMAIN"}]
+            ips = [e for e in entities if e.get("entity_type") == "IP"]
+            emails = [e for e in entities if e.get("entity_type") == "EMAIL"]
 
-            # Person -> UPI
+            # Person -> UPI / VPA
             for p in persons:
                 for u in upis:
                     relationships.append({
                         "source": f"PERSON:{p['value']}",
-                        "target": f"UPI:{u['value']}",
-                        "type": "ASSOCIATED_UPI",
+                        "target": f"{u.get('entity_type', 'UPI')}:{u['value']}",
+                        "type": "ASSOCIATED_PAYMENT_HANDLE",
                         "confidence": 0.90,
-                        "reason": "Name associated with UPI handler",
+                        "reason": "Name associated with payment handle",
+                        "evidence_id": case_id
+                    })
+                for ph in phones:
+                    relationships.append({
+                        "source": f"PERSON:{p['value']}",
+                        "target": f"PHONE:{ph['value']}",
+                        "type": "OWNED_PHONE",
+                        "confidence": 0.92,
+                        "reason": "Contact number linked to identity",
                         "evidence_id": case_id
                     })
 
-            # Phone -> UPI
+            # Phone -> UPI / VPA
             for ph in phones:
                 for u in upis:
-                    if ph["value"] in u["value"] or len(upis) == 1:
-                        relationships.append({
-                            "source": f"PHONE:{ph['value']}",
-                            "target": f"UPI:{u['value']}",
-                            "type": "LINKED_PHONE",
-                            "confidence": 0.92,
-                            "reason": "Mobile number linked to virtual payment handle",
-                            "evidence_id": case_id
-                        })
+                    relationships.append({
+                        "source": f"PHONE:{ph['value']}",
+                        "target": f"{u.get('entity_type', 'UPI')}:{u['value']}",
+                        "type": "LINKED_PHONE",
+                        "confidence": 0.92,
+                        "reason": "Mobile number linked to virtual payment handle",
+                        "evidence_id": case_id
+                    })
+                for b in bank_accs:
+                    relationships.append({
+                        "source": f"PHONE:{ph['value']}",
+                        "target": f"BANK_ACCOUNT:{b['value']}",
+                        "type": "REGISTERED_ACCOUNT",
+                        "confidence": 0.88,
+                        "reason": "Phone associated with banking alerts",
+                        "evidence_id": case_id
+                    })
 
-            # Bank Account -> IFSC
+            # Bank Account -> VPA / UPI
             for b in bank_accs:
+                for u in upis:
+                    relationships.append({
+                        "source": f"BANK_ACCOUNT:{b['value']}",
+                        "target": f"{u.get('entity_type', 'UPI')}:{u['value']}",
+                        "type": "LINKED_VPA",
+                        "confidence": 0.95,
+                        "reason": "Bank account linked to Virtual Payment Address",
+                        "evidence_id": case_id
+                    })
                 for ifsc in ifscs:
                     relationships.append({
                         "source": f"BANK_ACCOUNT:{b['value']}",
@@ -95,6 +125,51 @@ class GraphAgent(BaseAgent):
                         "type": "HELD_AT_BRANCH",
                         "confidence": 0.98,
                         "reason": "Account branch routing code",
+                        "evidence_id": case_id
+                    })
+
+            # Transaction IDs -> Bank / UPI / VPA
+            for tid in txn_ids:
+                for u in upis:
+                    relationships.append({
+                        "source": f"TRANSACTION_ID:{tid['value']}",
+                        "target": f"{u.get('entity_type', 'UPI')}:{u['value']}",
+                        "type": "REFERENCE_HANDLE",
+                        "confidence": 0.95,
+                        "reason": "Transaction reference linked to payment handle",
+                        "evidence_id": case_id
+                    })
+                for b in bank_accs:
+                    relationships.append({
+                        "source": f"TRANSACTION_ID:{tid['value']}",
+                        "target": f"BANK_ACCOUNT:{b['value']}",
+                        "type": "CREDITED_ACCOUNT",
+                        "confidence": 0.95,
+                        "reason": "Transaction settled in bank account",
+                        "evidence_id": case_id
+                    })
+
+            # URL -> IP
+            for u in urls:
+                for ip in ips:
+                    relationships.append({
+                        "source": f"URL:{u['value']}",
+                        "target": f"IP:{ip['value']}",
+                        "type": "RESOLVES_TO",
+                        "confidence": 0.92,
+                        "reason": "Host domain DNS resolution",
+                        "evidence_id": case_id
+                    })
+
+            # Email -> UPI / Person
+            for em in emails:
+                for p in persons:
+                    relationships.append({
+                        "source": f"PERSON:{p['value']}",
+                        "target": f"EMAIL:{em['value']}",
+                        "type": "REGISTERED_EMAIL",
+                        "confidence": 0.90,
+                        "reason": "Contact email address",
                         "evidence_id": case_id
                     })
 
