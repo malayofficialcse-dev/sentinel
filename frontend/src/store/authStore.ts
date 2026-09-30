@@ -1,5 +1,19 @@
 import { create } from 'zustand';
 import { User, UserRole, Permission } from '../types';
+import { ROLE_PERMISSIONS } from '../permissions/roles';
+
+if (typeof window !== 'undefined') {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem('sentinel-role-permissions') || '{}') as Record<string, Permission[]>;
+    Object.entries(saved).forEach(([role, permissions]) => {
+      if (role in ROLE_PERMISSIONS && Array.isArray(permissions)) {
+        ROLE_PERMISSIONS[role as UserRole] = permissions;
+      }
+    });
+  } catch {
+    // Ignore malformed local access policies and use the built-in defaults.
+  }
+}
 
 // System-level user used when auth is bypassed (no real login system active).
 // This does NOT represent a real person — it is a neutral placeholder.
@@ -9,7 +23,7 @@ const systemUser: User = {
   email: 'system@sentinel.local',
   role: UserRole.INVESTIGATOR,
   status: 'active',
-  permissions: Object.values(Permission),
+  permissions: ROLE_PERMISSIONS[UserRole.INVESTIGATOR],
   createdAt: new Date().toISOString(),
 };
 
@@ -22,6 +36,7 @@ interface AuthState {
   logout: () => void;
   switchRole: (role: UserRole) => void;
   hasPermission: (permission: Permission) => boolean;
+  setRolePermissions: (role: UserRole, permissions: Permission[]) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -32,12 +47,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   permissions: systemUser.permissions,
 
   login: (role = UserRole.INVESTIGATOR) => {
-    const user = { ...systemUser, role };
+    const permissions = ROLE_PERMISSIONS[role] || [];
+    const user = { ...systemUser, role, permissions };
     set({
       user,
       isAuthenticated: true,
       role,
-      permissions: systemUser.permissions,
+      permissions,
     });
   },
 
@@ -51,13 +67,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   switchRole: (role: UserRole) => {
-    const user = { ...systemUser, role };
+    const permissions = ROLE_PERMISSIONS[role] || [];
+    const user = { ...systemUser, role, permissions };
     set({
       user,
       role,
-      permissions: systemUser.permissions,
+      permissions,
       isAuthenticated: true,
     });
+  },
+
+  setRolePermissions: (role, permissions) => {
+    ROLE_PERMISSIONS[role] = permissions;
+    if (typeof window !== 'undefined') {
+      const current = JSON.parse(window.localStorage.getItem('sentinel-role-permissions') || '{}');
+      window.localStorage.setItem('sentinel-role-permissions', JSON.stringify({ ...current, [role]: permissions }));
+    }
+    if (get().role === role) {
+      set((state) => ({ permissions, user: state.user ? { ...state.user, permissions } : state.user }));
+    }
   },
 
   hasPermission: (permission: Permission) => {

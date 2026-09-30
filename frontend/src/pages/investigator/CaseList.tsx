@@ -5,7 +5,8 @@ import { DataTable, Column } from '../../components/ui/DataTable';
 import { SeverityBadge, CaseStatusBadge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Case, Severity, CaseStatus } from '../../types';
+import { Case, Severity, CaseStatus, Permission } from '../../types';
+import { Can } from '../../permissions/Can';
 
 export const CaseList: React.FC = () => {
   const [search, setSearch] = useState('');
@@ -113,13 +114,15 @@ export const CaseList: React.FC = () => {
             Active fraud investigations, evidence correlation, and entity clusters.
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={<span className="material-symbols-outlined text-[16px]">add</span>}
-        >
-          New Case
-        </Button>
+        <Can permission={Permission.CREATE_CASE}>
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<span className="material-symbols-outlined text-[16px]">add</span>}
+          >
+            New Case
+          </Button>
+        </Can>
       </div>
 
       {/* Filters Bar */}

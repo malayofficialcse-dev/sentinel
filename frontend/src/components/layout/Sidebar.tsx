@@ -2,13 +2,14 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
-import { UserRole } from '../../types';
+import { Permission, UserRole } from '../../types';
 
 interface NavItem {
   label: string;
   path: string;
   icon: string;
   badge?: string | number;
+  permission?: Permission;
 }
 
 export const Sidebar: React.FC = () => {
@@ -18,27 +19,30 @@ export const Sidebar: React.FC = () => {
   const isInvestigationPortal = location.pathname.startsWith('/investigator') || location.pathname.startsWith('/admin');
 
   const mainNavItems: NavItem[] = [
-    { label: 'Dashboard', path: '/investigator', icon: 'dashboard' },
-    { label: 'Cases', path: '/investigator/cases', icon: 'work', badge: '128' },
-    { label: 'Evidence', path: '/investigator/evidence', icon: 'inventory_2' },
-    { label: 'Entities', path: '/investigator/entities', icon: 'groups' },
-    { label: 'AI Model Hub', path: '/investigator/models', icon: 'model_training', badge: '3' },
-    { label: 'Threat Intelligence', path: '/investigator/threat-intelligence', icon: 'security' },
-    { label: 'Financial', path: '/investigator/financial', icon: 'payments' },
-    { label: 'Graph', path: '/investigator/graph', icon: 'hub' },
-    { label: 'Findings', path: '/investigator/findings', icon: 'fact_check', badge: '3' },
-    { label: 'Case Reports', path: '/investigator/reports', icon: 'description' },
+    { label: 'Dashboard', path: '/investigator', icon: 'dashboard', permission: Permission.VIEW_ALL_CASES },
+    { label: 'Cases', path: '/investigator/cases', icon: 'work', badge: '128', permission: Permission.VIEW_ALL_CASES },
+    { label: 'Evidence', path: '/investigator/evidence', icon: 'inventory_2', permission: Permission.VIEW_EVIDENCE },
+    { label: 'Entities', path: '/investigator/entities', icon: 'groups', permission: Permission.VIEW_ENTITIES },
+    { label: 'AI Model Hub', path: '/investigator/models', icon: 'model_training', badge: '3', permission: Permission.VIEW_AI_AGENTS },
+    { label: 'Threat Intelligence', path: '/investigator/threat-intelligence', icon: 'security', permission: Permission.VIEW_THREAT_INTEL },
+    { label: 'Financial', path: '/investigator/financial', icon: 'payments', permission: Permission.VIEW_FINANCIAL },
+    { label: 'Graph', path: '/investigator/graph', icon: 'hub', permission: Permission.VIEW_GRAPH },
+    { label: 'Findings', path: '/investigator/findings', icon: 'fact_check', badge: '3', permission: Permission.VIEW_FINDINGS },
+    { label: 'Case Reports', path: '/investigator/reports', icon: 'description', permission: Permission.VIEW_REPORTS },
   ];
 
   const reportNavItems: NavItem[] = [
-    { label: 'Reporter Dashboard', path: '/reporter', icon: 'home' },
-    { label: 'New Report', path: '/report', icon: 'add_circle' },
-    { label: 'My Reports', path: '/reports', icon: 'description' },
+    { label: 'Reporter Dashboard', path: '/reporter', icon: 'home', permission: Permission.SUBMIT_REPORT },
+    { label: 'New Report', path: '/report', icon: 'add_circle', permission: Permission.CREATE_REPORT },
+    { label: 'My Reports', path: '/reports', icon: 'description', permission: Permission.VIEW_OWN_REPORTS },
   ];
 
   const adminNavItems: NavItem[] = [
-    { label: 'Administration', path: '/admin', icon: 'settings_applications' },
+    { label: 'Administration', path: '/admin', icon: 'settings_applications', permission: Permission.MANAGE_USERS },
   ];
+  const { hasPermission } = useAuthStore();
+  const visibleReportItems = reportNavItems.filter((item) => !item.permission || hasPermission(item.permission));
+  const visibleMainItems = mainNavItems.filter((item) => !item.permission || hasPermission(item.permission));
 
   return (
     <aside
@@ -79,7 +83,7 @@ export const Sidebar: React.FC = () => {
             <div className="px-3 pb-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--text-muted)]">
               REPORT CENTER
             </div>
-            {reportNavItems.map((item) => (
+            {visibleReportItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -110,7 +114,7 @@ export const Sidebar: React.FC = () => {
             <div className="px-3 pb-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--text-muted)]">
               INVESTIGATION WORKSPACE
             </div>
-            {mainNavItems.map((item) => (
+            {visibleMainItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}

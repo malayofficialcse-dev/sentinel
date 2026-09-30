@@ -4,7 +4,8 @@ import { caseApi } from '../../services/caseApi';
 import { dashboardApi, DashboardStats } from '../../services/dashboardApi';
 import { SeverityBadge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Case } from '../../types';
+import { Case, Permission } from '../../types';
+import { Can } from '../../permissions/Can';
 
 export const InvestigatorDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -47,14 +48,16 @@ export const InvestigatorDashboard: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => navigate('/investigator/cases')}
-              leftIcon={<span className="material-symbols-outlined text-[16px]">add</span>}
-            >
-              New Case
-            </Button>
+            <Can permission={Permission.CREATE_CASE}>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => navigate('/investigator/cases')}
+                leftIcon={<span className="material-symbols-outlined text-[16px]">add</span>}
+              >
+                New Case
+              </Button>
+            </Can>
           </div>
         </div>
 

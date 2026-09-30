@@ -55,6 +55,7 @@ export const TopNav: React.FC = () => {
             onChange={(e) => switchRole(e.target.value as UserRole)}
             className="text-[11px] font-bold bg-transparent text-[var(--primary)] cursor-pointer focus:outline-none"
           >
+            <option value={UserRole.REPORTER} className="bg-[var(--surface)] text-[var(--text-primary)]">Reporter</option>
             <option value={UserRole.INVESTIGATOR} className="bg-[var(--surface)] text-[var(--text-primary)]">Investigator</option>
             <option value={UserRole.ANALYST} className="bg-[var(--surface)] text-[var(--text-primary)]">Analyst</option>
             <option value={UserRole.REVIEWER} className="bg-[var(--surface)] text-[var(--text-primary)]">Reviewer</option>

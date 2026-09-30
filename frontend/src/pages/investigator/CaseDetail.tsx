@@ -5,7 +5,8 @@ import { evidenceApi } from '../../services/evidenceApi';
 import { SeverityBadge, CaseStatusBadge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { GraphViewer } from '../../components/graph/GraphViewer';
-import { Entity } from '../../types';
+import { Entity, Permission } from '../../types';
+import { Can } from '../../permissions/Can';
 
 export const CaseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -176,6 +177,7 @@ export const CaseDetail: React.FC = () => {
           </button>
 
           <div className="flex items-center gap-2">
+            <Can permission={Permission.CREATE_EVIDENCE}>
             <label className="cursor-pointer">
               <input
                 type="file"
@@ -189,7 +191,9 @@ export const CaseDetail: React.FC = () => {
                 {uploading ? 'Analyzing Evidence…' : 'Upload Evidence (Multi)'}
               </span>
             </label>
+            </Can>
 
+            <Can permission={Permission.INVESTIGATION_RUN}>
             <Button
               variant="primary"
               size="sm"
@@ -199,6 +203,7 @@ export const CaseDetail: React.FC = () => {
             >
               {investigating ? 'Running AI Pipeline…' : 'Run AI Investigation'}
             </Button>
+            </Can>
           </div>
         </div>
 

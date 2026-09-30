@@ -1,12 +1,25 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar';
 import { TopNav } from '../components/layout/TopNav';
 import { useUIStore } from '../store/uiStore';
+import { useAuthStore } from '../store/authStore';
+import { Permission } from '../types';
 
 /** Shared workspace shell for the Report Center and Investigation modules. */
 export const ReporterLayout: React.FC = () => {
   const { sidebarCollapsed } = useUIStore();
+  const { hasPermission } = useAuthStore();
+  const location = useLocation();
+  const requiredPermission = location.pathname === '/report'
+    ? Permission.CREATE_REPORT
+    : location.pathname.startsWith('/reports')
+      ? Permission.VIEW_OWN_REPORTS
+      : Permission.SUBMIT_REPORT;
+
+  if (!hasPermission(requiredPermission)) {
+    return <Navigate to="/permission-denied" replace />;
+  }
 
   return (
     <div className="h-screen w-screen flex bg-[var(--bg-app)] text-[var(--text-primary)] overflow-hidden font-sans transition-colors">
