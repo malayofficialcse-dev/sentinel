@@ -16,6 +16,7 @@ interface GraphViewerProps {
   relationships?: GraphRelationship[];
   onSelectEntity?: (entity: Entity | null) => void;
   selectedEntityId?: string | null;
+  onFullscreen?: () => void;
 }
 
 interface RenderNode {
@@ -70,6 +71,7 @@ export const GraphViewer: React.FC<GraphViewerProps> = ({
   relationships = [],
   onSelectEntity,
   selectedEntityId,
+  onFullscreen,
 }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(selectedEntityId || null);
@@ -295,6 +297,19 @@ export const GraphViewer: React.FC<GraphViewerProps> = ({
         >
           <span className="material-symbols-outlined text-[18px]">center_focus_strong</span>
         </button>
+        {onFullscreen && (
+          <>
+            <div className="w-px h-4 bg-[var(--border)] mx-1" />
+            <button
+              onClick={onFullscreen}
+              className="p-1.5 rounded-[6px] hover:bg-[var(--primary)]/15 text-[var(--text-secondary)] hover:text-[var(--primary)] cursor-pointer transition-colors"
+              title="Open full screen"
+              aria-label="Open graph full screen"
+            >
+              <span className="material-symbols-outlined text-[18px]">fullscreen</span>
+            </button>
+          </>
+        )}
       </div>
 
       <div className="absolute bottom-3 left-4 bg-[var(--surface)]/90 border border-[var(--border)] rounded-[8px] px-3 py-1.5 shadow-sm z-20 text-[11px] text-[var(--text-secondary)] flex items-center gap-4 font-mono backdrop-blur-sm transition-colors">

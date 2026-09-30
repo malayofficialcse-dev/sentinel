@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { UserRole } from '../../types';
@@ -12,6 +12,8 @@ export const TopNav: React.FC = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const isInvestigationPortal = location.pathname.startsWith('/investigator') || location.pathname.startsWith('/admin');
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +40,13 @@ export const TopNav: React.FC = () => {
 
       {/* Action Icons & Profile */}
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => navigate(isInvestigationPortal ? '/reporter' : '/investigator')}
+          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 mr-1 rounded-[4px] border border-[var(--info-border)] bg-[var(--info-bg)] text-[11px] font-semibold text-[var(--primary)] hover:bg-[var(--primary)]/15 transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[15px]">{isInvestigationPortal ? 'assignment' : 'manage_search'}</span>
+          {isInvestigationPortal ? 'Report Center' : 'Investigator Portal'}
+        </button>
         {/* Role Switcher for live testing / demo */}
         <div className="mr-1 hidden md:flex items-center gap-1.5 bg-[var(--surface-secondary)] px-2 py-1 rounded-[4px] border border-[var(--border)]">
           <span className="text-[11px] text-[var(--text-secondary)] font-semibold">Demo Role:</span>

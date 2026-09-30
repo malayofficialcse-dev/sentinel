@@ -128,7 +128,7 @@ export const ReportResult: React.FC = () => {
       </div>
 
       {/* Summary Narrative */}
-      {report.summary && (
+      {(
         <div className="bg-white border border-[#E1DFDD] rounded-[4px] p-5 shadow-xs">
           <div className="border-b border-[#E1DFDD] pb-2 mb-3">
             <h3 className="font-semibold text-[15px] text-[#242424] flex items-center gap-2">
@@ -136,12 +136,14 @@ export const ReportResult: React.FC = () => {
               Investigative Summary
             </h3>
           </div>
-          <p className="text-[13px] text-[#323130] leading-relaxed whitespace-pre-wrap">{report.summary}</p>
+          <p className="text-[13px] text-[#323130] leading-relaxed whitespace-pre-wrap">
+            {report.summary || 'The evidence was processed successfully. Review the risk score, detected information, and recommended actions before taking any next step.'}
+          </p>
         </div>
       )}
 
       {/* Recommended Actions */}
-      {(report.recommendations || []).length > 0 && (
+      {(
         <div className="bg-white border border-[#E1DFDD] rounded-[4px] p-5 shadow-xs">
           <div className="border-b border-[#E1DFDD] pb-2 mb-3">
             <h3 className="font-semibold text-[15px] text-[#242424] flex items-center gap-2">
@@ -151,7 +153,12 @@ export const ReportResult: React.FC = () => {
           </div>
 
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[13px] text-[#323130]">
-            {report.recommendations.map((rec, idx) => (
+            {(report.recommendations.length > 0 ? report.recommendations : [
+              'Do not send money or share passwords, OTPs, or banking details.',
+              'Verify the sender independently using an official contact method.',
+              'Preserve the original message, file, link, or transaction details as evidence.',
+              'Report suspected fraud to your bank or the appropriate cybercrime authority.',
+            ]).map((rec, idx) => (
               <li key={idx} className="flex items-start gap-2 p-2.5 bg-[#F1FAF1] border border-[#A7D7A7] rounded-[4px]">
                 <span className="material-symbols-outlined text-[#107C10] text-[18px] shrink-0 mt-0.5">check</span>
                 <span>{rec}</span>

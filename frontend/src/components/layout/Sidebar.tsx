@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { UserRole } from '../../types';
@@ -14,6 +14,8 @@ interface NavItem {
 export const Sidebar: React.FC = () => {
   const { role } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const location = useLocation();
+  const isInvestigationPortal = location.pathname.startsWith('/investigator') || location.pathname.startsWith('/admin');
 
   const mainNavItems: NavItem[] = [
     { label: 'Dashboard', path: '/investigator', icon: 'dashboard' },
@@ -24,10 +26,14 @@ export const Sidebar: React.FC = () => {
     { label: 'Threat Intelligence', path: '/investigator/threat-intelligence', icon: 'security' },
     { label: 'Financial', path: '/investigator/financial', icon: 'payments' },
     { label: 'Graph', path: '/investigator/graph', icon: 'hub' },
-    { label: 'AI Agents', path: '/investigator/agents', icon: 'psychology' },
     { label: 'Findings', path: '/investigator/findings', icon: 'fact_check', badge: '3' },
-    { label: 'Reports', path: '/investigator/reports', icon: 'description' },
-    { label: 'Audit Logs', path: '/investigator/audit', icon: 'analytics' },
+    { label: 'Case Reports', path: '/investigator/reports', icon: 'description' },
+  ];
+
+  const reportNavItems: NavItem[] = [
+    { label: 'Reporter Dashboard', path: '/reporter', icon: 'home' },
+    { label: 'New Report', path: '/report', icon: 'add_circle' },
+    { label: 'My Reports', path: '/reports', icon: 'description' },
   ];
 
   const adminNavItems: NavItem[] = [
@@ -42,14 +48,16 @@ export const Sidebar: React.FC = () => {
     >
       {/* Brand Header */}
       <div className="px-4 h-16 border-b border-[var(--border)] flex items-center justify-between">
-        <NavLink to="/investigator" className="flex items-center gap-2.5 overflow-hidden">
+        <NavLink to={isInvestigationPortal ? '/investigator' : '/reporter'} className="flex items-center gap-2.5 overflow-hidden">
           <div className="w-8 h-8 rounded-[4px] bg-[var(--primary)] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
             <span className="material-symbols-outlined text-[20px] fill-1 text-white">shield</span>
           </div>
           {!sidebarCollapsed && (
             <div className="flex flex-col truncate text-left">
               <span className="font-bold text-[15px] text-[var(--text-primary)] tracking-tight leading-none">SENTINEL</span>
-              <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider font-semibold mt-1">Investigation</span>
+              <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider font-semibold mt-1">
+                {isInvestigationPortal ? 'Investigation' : 'Report Center'}
+              </span>
             </div>
           )}
         </NavLink>
@@ -66,44 +74,74 @@ export const Sidebar: React.FC = () => {
 
       {/* Navigation List */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-        {mainNavItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === '/investigator'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-[4px] text-[13px] font-medium transition-colors select-none group relative ${
-                isActive
-                  ? 'bg-[var(--surface-selected)] text-[var(--primary)] font-semibold border-l-3 border-[var(--primary)]'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span
-                  className={`material-symbols-outlined text-[20px] shrink-0 ${
-                    isActive ? 'text-[var(--primary)] fill-1' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {item.icon}
-                </span>
-                {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-                {!sidebarCollapsed && item.badge && (
-                  <span
-                    className={`ml-auto text-[10px] px-1.5 py-0.2 rounded-[4px] font-bold ${
-                      isActive ? 'bg-[var(--primary)] text-white' : 'bg-[var(--surface-hover)] text-[var(--text-secondary)]'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
+        {!isInvestigationPortal && (
+          <>
+            <div className="px-3 pb-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--text-muted)]">
+              REPORT CENTER
+            </div>
+            {reportNavItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.path === '/reporter' || item.path === '/report'}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2 rounded-[4px] text-[13px] font-medium transition-colors select-none group relative ${
+                    isActive
+                      ? 'bg-[var(--surface-selected)] text-[var(--primary)] font-semibold border-l-3 border-[var(--primary)]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <span className={`material-symbols-outlined text-[20px] shrink-0 ${isActive ? 'text-[var(--primary)] fill-1' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'}`}>
+                      {item.icon}
+                    </span>
+                    {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+                  </>
                 )}
-              </>
-            )}
-          </NavLink>
-        ))}
+              </NavLink>
+            ))}
+          </>
+        )}
 
-        {role === UserRole.ADMIN && (
+        {isInvestigationPortal && (
+          <>
+            <div className="px-3 pb-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--text-muted)]">
+              INVESTIGATION WORKSPACE
+            </div>
+            {mainNavItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.path === '/investigator'}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2 rounded-[4px] text-[13px] font-medium transition-colors select-none group relative ${
+                    isActive
+                      ? 'bg-[var(--surface-selected)] text-[var(--primary)] font-semibold border-l-3 border-[var(--primary)]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <span className={`material-symbols-outlined text-[20px] shrink-0 ${isActive ? 'text-[var(--primary)] fill-1' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'}`}>
+                      {item.icon}
+                    </span>
+                    {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+                    {!sidebarCollapsed && item.badge && (
+                      <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-[4px] font-bold ${isActive ? 'bg-[var(--primary)] text-white' : 'bg-[var(--surface-hover)] text-[var(--text-secondary)]'}`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </>
+        )}
+
+        {isInvestigationPortal && role === UserRole.ADMIN && (
           <>
             <div className="my-2 border-t border-[var(--border)]" />
             {adminNavItems.map((item) => (
@@ -129,6 +167,7 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* Footer Navigation */}
+      {isInvestigationPortal && (
       <div className="p-2 border-t border-[var(--border)] space-y-0.5">
         <NavLink
           to="/investigator/help"
@@ -145,6 +184,7 @@ export const Sidebar: React.FC = () => {
           {!sidebarCollapsed && <span>System Status</span>}
         </NavLink>
       </div>
+      )}
     </aside>
   );
 };

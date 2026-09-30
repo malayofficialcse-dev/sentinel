@@ -1,5 +1,30 @@
 import { apiClient } from './api';
-import { Report, RiskLevel, ReportStatus, EvidenceType } from '../types';
+import { Report, RiskLevel, ReportStatus, EvidenceType, RiskIndicator, Severity } from '../types';
+
+function normalizeRiskIndicators(raw: any): RiskIndicator[] {
+  const source = Array.isArray(raw)
+    ? raw
+    : Object.entries(raw || {}).map(([label, value]) => ({ label, value }));
+
+  return source.map((item: any, index): RiskIndicator => {
+    const score = Number(item?.score ?? item?.weight ?? (typeof item?.value === 'number' ? item.value : 0)) || 0;
+    const severity = String(item?.severity || (score >= 70 ? 'HIGH' : score >= 40 ? 'MEDIUM' : 'LOW')) as Severity;
+    const rawDescription = item?.description ?? item?.value;
+
+    return {
+      title: String(item?.title ?? item?.label ?? item?.name ?? `Risk factor ${index + 1}`),
+      severity,
+      score,
+      description: typeof rawDescription === 'string'
+        ? rawDescription
+        : rawDescription == null
+          ? 'This factor was identified during evidence analysis.'
+          : JSON.stringify(rawDescription),
+      confidence: Number(item?.confidence ?? 1),
+      evidenceId: item?.evidenceId,
+    };
+  });
+}
 
 function mapReport(item: any): Report {
   return {
@@ -13,7 +38,7 @@ function mapReport(item: any): Report {
     evidenceType: (item.evidenceType as EvidenceType) || EvidenceType.DOCUMENT,
     summary: item.summary || '',
     detectedEntities: item.detectedEntities || [],
-    riskIndicators: item.riskIndicators || [],
+    riskIndicators: normalizeRiskIndicators(item.riskIndicators || item.risk?.factors),
     recommendations: item.recommendations || [],
   };
 }

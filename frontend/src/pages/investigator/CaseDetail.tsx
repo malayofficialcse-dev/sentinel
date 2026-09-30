@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { caseApi } from '../../services/caseApi';
 import { evidenceApi } from '../../services/evidenceApi';
@@ -17,6 +17,47 @@ export const CaseDetail: React.FC = () => {
   const [investigating, setInvestigating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [graphFullscreen, setGraphFullscreen] = useState(false);
+  const graphFullscreenRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!graphFullscreen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const enterFullscreen = async () => {
+      try {
+        if (graphFullscreenRef.current && !document.fullscreenElement) {
+          await graphFullscreenRef.current.requestFullscreen?.();
+        }
+      } catch {
+        // The expanded overlay remains usable if the browser blocks Fullscreen API.
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && graphFullscreen) {
+        setGraphFullscreen(false);
+      }
+    };
+
+    void enterFullscreen();
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      if (document.fullscreenElement) void document.exitFullscreen?.();
+    };
+  }, [graphFullscreen]);
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && graphFullscreen) setGraphFullscreen(false);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [graphFullscreen]);
 
   const fetchCase = (caseId: string) => {
     setLoading(true);
@@ -326,32 +367,41 @@ export const CaseDetail: React.FC = () => {
           </div>
 
           <div className="h-[420px] w-full">
-            <GraphViewer entities={mappedEntities} relationships={graph} />
+            <GraphViewer
+              entities={mappedEntities}
+              relationships={graph}
+              onFullscreen={() => setGraphFullscreen(true)}
+            />
           </div>
         </section>
       </div>
 
       {graphFullscreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1220]/80 p-4 backdrop-blur-sm">
-          <div className="w-full h-full max-w-[1800px] max-h-[95vh] bg-[var(--surface)] border border-[var(--border)] rounded-[10px] shadow-2xl overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--surface)]">
+        <div ref={graphFullscreenRef} className="fixed inset-0 z-[100] flex flex-col bg-[var(--bg-app)] text-[var(--text-primary)]">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border)] bg-[var(--surface)] shadow-lg">
               <div>
-                <h3 className="font-bold text-[15px] text-[var(--text-primary)]">Entity Relationship Graph</h3>
-                <p className="text-[11px] text-[var(--text-secondary)]">Case: {data?.caseId || id} • {mappedEntities.length} nodes • {graph.length} links</p>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[var(--primary)]">hub</span>
+                  <h3 className="font-bold text-[16px] text-[var(--text-primary)]">Entity Relationship Graph</h3>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 ml-7">Case: {data?.caseId || id} • {mappedEntities.length} nodes • {graph.length} links</p>
               </div>
               <button
                 type="button"
                 onClick={() => setGraphFullscreen(false)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-primary)] text-[12px] font-semibold hover:bg-[var(--surface)] cursor-pointer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-[7px] border border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-primary)] text-[12px] font-semibold hover:bg-[var(--primary)]/15 hover:border-[var(--primary)] cursor-pointer transition-colors"
               >
                 <span className="material-symbols-outlined text-[16px]">close</span>
                 Close
               </button>
-            </div>
+          </div>
 
-            <div className="flex-1 min-h-0 bg-[var(--bg-app)]">
-              <GraphViewer entities={mappedEntities} relationships={graph} />
-            </div>
+          <div className="flex-1 min-h-0 p-3 sm:p-5 bg-[var(--bg-app)]">
+            <GraphViewer
+              entities={mappedEntities}
+              relationships={graph}
+              onFullscreen={() => setGraphFullscreen(true)}
+            />
           </div>
         </div>
       )}

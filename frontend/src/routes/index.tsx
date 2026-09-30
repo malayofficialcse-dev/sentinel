@@ -27,7 +27,6 @@ import { EntityList } from '../pages/investigator/EntityList';
 import { GraphInvestigation } from '../pages/investigator/GraphInvestigation';
 import { ThreatIntelligence } from '../pages/investigator/ThreatIntelligence';
 import { FinancialAnalysis } from '../pages/investigator/FinancialAnalysis';
-import { AIAgents } from '../pages/investigator/AIAgents';
 import { Findings } from '../pages/investigator/Findings';
 import { Reports } from '../pages/investigator/Reports';
 import { AuditLogs } from '../pages/investigator/AuditLogs';
@@ -92,7 +91,8 @@ export const router = createBrowserRouter([
       { path: 'graph', element: <GraphInvestigation /> },
       { path: 'threat-intelligence', element: <ThreatIntelligence /> },
       { path: 'financial', element: <FinancialAnalysis /> },
-      { path: 'agents', element: <AIAgents /> },
+      // AI agents are now grouped under the AI Model Hub.
+      { path: 'agents', element: <Navigate to="/investigator/models" replace /> },
       
       // Individual AI Model Sandbox & Diagnostics Pages
       { path: 'models', element: <AIModelsHub /> },

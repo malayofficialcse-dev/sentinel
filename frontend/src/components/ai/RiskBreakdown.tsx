@@ -18,7 +18,13 @@ export const RiskBreakdown: React.FC<RiskBreakdownProps> = ({ indicators }) => {
       </div>
 
       <div className="space-y-2.5">
-        {indicators.map((ind, idx) => (
+        {indicators.length === 0 ? (
+          <div className="rounded-[4px] border border-dashed border-[#E1DFDD] bg-[#FAFAFA] p-5 text-center">
+            <span className="material-symbols-outlined text-[26px] text-[#8A8886]">check_circle</span>
+            <p className="text-[13px] font-semibold text-[#242424] mt-1">No additional risk factors recorded</p>
+            <p className="text-[12px] text-[#605E5C] mt-1">The analysis did not return itemized indicators for this report.</p>
+          </div>
+        ) : indicators.map((ind, idx) => (
           <div
             key={idx}
             className="p-3 bg-[#FAFAFA] border border-[#E1DFDD] rounded-[4px] flex flex-col gap-1.5 hover:border-[#0078D4] transition-colors"
