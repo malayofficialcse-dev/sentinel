@@ -2,12 +2,14 @@ from __future__ import annotations
 from collections import Counter, defaultdict, deque
 import re
 from typing import Any
+from .graph_algorithms import GraphAlgorithms
 
 
 class GraphService:
     """Database-independent graph analysis; Neo4j can consume this contract later."""
 
     def analyze(self, entities: list[dict[str, Any]], relationships: list[dict[str, Any]]) -> dict[str, Any]:
+        algorithms = GraphAlgorithms()
         nodes_by_key: dict[tuple[str, str], dict[str, Any]] = {}
         aliases: dict[str, str] = {}
 
@@ -153,13 +155,45 @@ class GraphService:
                 "message": f"{len(suspicious)} central hub entities identified in transaction path"
             })
 
+        # Transparent graph-native signals.  Neo4j GDS can replace these with
+        # PageRank, Louvain/Leiden and link prediction once persisted graphs
+        # are enabled; keeping the same output contract makes that migration
+        # backwards compatible.
+        degree_centrality = {
+            node_id: round(count / max(1, len(nodes_by_key) - 1), 4)
+            for node_id, count in degree.items()
+        }
+        high_risk_types = {"UPI", "BANK_ACCOUNT", "WALLET", "PHONE", "DEVICE", "IP", "DOMAIN"}
+        risk_paths = [
+            {"source": edge["source"], "target": edge["target"], "type": edge["type"], "evidence_id": edge.get("evidence_id")}
+            for edge in edges.values()
+            if edge["type"] in {"TRANSACTION", "SENT_TO", "RECEIVED_BY", "CONTROLS", "USES"}
+        ]
+        if any(n["type"] in high_risk_types and degree[n["id"]] >= 3 for n in nodes_by_key.values()):
+            findings.append({
+                "type": "POSSIBLE_FRAUD_HUB",
+                "message": "A high-risk identifier is connected to multiple entities or transactions",
+                "evidence_ids": [edge.get("evidence_id") for edge in edges.values() if edge.get("evidence_id")],
+            })
+
+        graph_nodes = list(nodes_by_key.values())
+        graph_edges = list(edges.values())
+        pagerank = algorithms.pagerank(graph_nodes, graph_edges)
+        link_predictions = algorithms.link_predictions(graph_nodes, graph_edges)
+        if link_predictions:
+            findings.append({
+                "type": "PREDICTED_RELATIONSHIPS",
+                "message": f"{len(link_predictions)} possible hidden relationships found from shared graph neighbors",
+                "predictions": link_predictions[:5],
+            })
+
         score = min(100, len(suspicious) * 12 + len(repeated) * 15 + min(30, len(edges) * 5))
 
         return {
             "agent": "graph-agent",
             "status": "completed",
-            "nodes": list(nodes_by_key.values()),
-            "edges": list(edges.values()),
+            "nodes": graph_nodes,
+            "edges": graph_edges,
             "clusters": clusters,
             "suspicious_entities": suspicious,
             "metrics": {
@@ -167,7 +201,12 @@ class GraphService:
                 "edge_count": len(edges),
                 "cluster_count": len(clusters),
                 "max_degree": max(degree.values(), default=0),
-                "repeated_transaction_paths": len(repeated)
+                "repeated_transaction_paths": len(repeated),
+                "centrality": degree_centrality,
+                "pagerank": pagerank,
+                "link_predictions": link_predictions,
+                "risk_paths": len(risk_paths),
+                "algorithm_backend": "in-memory-gds-compatible",
             },
             "risk_score": score,
             "findings": findings

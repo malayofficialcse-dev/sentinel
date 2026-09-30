@@ -1,17 +1,18 @@
 import { Router } from "express";
 import multer from "multer";
-import { analyzeEvidence, analyzeGraph, investigateCase } from "../controllers/analysis.controller";
+import { analyzeEvidence, analyzeGraph, investigateCase, askInvestigator } from "../controllers/analysis.controller";
 import { financial, malware, malwareHash, phishing, info } from "../controllers/model.controller";
 import {
   addEvidence, createCase, getCase, getCaseResource,
   investigateCase as investigatePersistedCase, listCases,
   getDashboard, listEntities, listTransactions, listFindings,
+  listGraph,
   updateFinding, listAuditLogs, listThreatIntelligence,
   listReports, getReport, listUsers, listAllEvidence,
 } from "../controllers/case.controller";
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
 // Cases
 router.post("/cases", createCase);
@@ -29,6 +30,7 @@ router.get("/dashboard", getDashboard);
 
 // Entities
 router.get("/entities", listEntities);
+router.get("/graph", listGraph);
 
 // Transactions
 router.get("/transactions", listTransactions);
@@ -53,6 +55,7 @@ router.get("/users", listUsers);
 // Graph & Investigation (legacy endpoints)
 router.post("/graph/analyze", analyzeGraph);
 router.post("/investigation/analyze", investigateCase);
+router.post("/assistant/query", askInvestigator);
 router.post("/evidence/:id/analyze", upload.single("file"), analyzeEvidence);
 
 // AI Models

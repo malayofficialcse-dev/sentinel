@@ -1,5 +1,7 @@
 class RiskService:
 
+    VERSION = "risk-v2.0"
+
     THREAT_WEIGHT = 0.25
     FINANCIAL_WEIGHT = 0.25
     ENTITY_WEIGHT = 0.20
@@ -15,13 +17,14 @@ class RiskService:
         evidence_score: float
     ) -> dict:
 
-        score = (
-            threat_score * self.THREAT_WEIGHT
-            + financial_score * self.FINANCIAL_WEIGHT
-            + entity_score * self.ENTITY_WEIGHT
-            + graph_score * self.GRAPH_WEIGHT
-            + evidence_score * self.EVIDENCE_WEIGHT
-        )
+        raw_factors = {
+            "threat": (threat_score, self.THREAT_WEIGHT),
+            "financial": (financial_score, self.FINANCIAL_WEIGHT),
+            "entity": (entity_score, self.ENTITY_WEIGHT),
+            "graph": (graph_score, self.GRAPH_WEIGHT),
+            "evidence": (evidence_score, self.EVIDENCE_WEIGHT),
+        }
+        score = sum(max(0.0, min(100.0, value)) * weight for value, weight in raw_factors.values())
 
         score = round(score, 2)
 
@@ -37,11 +40,11 @@ class RiskService:
         return {
             "score": score,
             "level": level,
-            "factors": {
-                "threat": threat_score,
-                "financial": financial_score,
-                "entity": entity_score,
-                "graph": graph_score,
-                "evidence": evidence_score
-            }
+            "confidence": round(min(1.0, sum(value > 0 for value, _ in raw_factors.values()) / len(raw_factors)), 2),
+            "model_version": self.VERSION,
+            "factors": {name: round(value, 2) for name, (value, _) in raw_factors.items()},
+            "factor_contributions": {
+                name: round(max(0.0, min(100.0, value)) * weight, 2)
+                for name, (value, weight) in raw_factors.items()
+            },
         }

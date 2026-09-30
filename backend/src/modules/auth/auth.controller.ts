@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { AppError } from "../../middleware/error.middleware";
 import {
   changePassword,
+  getCurrentUserProfile,
   loginUser,
   logoutUser,
   refreshUserToken,
@@ -54,7 +55,6 @@ export async function meController(req: Request, res: Response, next: NextFuncti
     if (!userId) {
       return next(new AppError(401, "UNAUTHORIZED", "Authentication required."));
     }
-    const { getCurrentUserProfile } = await import("./auth.service");
     const user = await getCurrentUserProfile(userId);
     return res.status(200).json({ success: true, data: user, message: "Profile retrieved." });
   } catch (error) {

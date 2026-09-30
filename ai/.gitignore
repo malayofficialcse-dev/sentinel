@@ -1,2 +1,10 @@
-venv
-.venv
+# Python environments and generated caches
+venv/
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local AI data and generated artifacts
+datasets/

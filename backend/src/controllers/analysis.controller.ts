@@ -15,6 +15,19 @@ export async function investigateCase(req: Request, res: Response) {
   catch (error) { res.status(502).json({ code: "AI_SERVICE_ERROR", message: error instanceof Error ? error.message : "AI service unavailable" }); }
 }
 
+export async function askInvestigator(req: Request, res: Response) {
+  try {
+    res.json(await aiClient.askInvestigator({
+      ...body(req),
+      question: String(req.body?.question || ""),
+      graph: req.body?.graph || {},
+      risk: req.body?.risk || {},
+    }));
+  } catch (error) {
+    res.status(502).json({ code: "AI_SERVICE_ERROR", message: error instanceof Error ? error.message : "AI service unavailable" });
+  }
+}
+
 export async function analyzeEvidence(req: Request, res: Response) {
   try {
     const file = (req as Request & { file?: Express.Multer.File }).file;

@@ -58,7 +58,13 @@ class FinancialModelService:
         oldbalance_dest: float,
         newbalance_dest: float,
         step: int = 1,
-        is_flagged_fraud: int = 0
+        is_flagged_fraud: int = 0,
+        history: Optional[list[dict[str, Any]]] = None,
+        account_age_days: Optional[int] = None,
+        device_changed: bool = False,
+        geo_distance_km: Optional[float] = None,
+        merchant_category: Optional[str] = None,
+        device_id: Optional[str] = None,
     ) -> dict[str, Any]:
         """
         Run fraud inference on transaction parameters.
@@ -91,6 +97,14 @@ class FinancialModelService:
             "amount_to_dest_balance": amount_to_dest_balance,
             "hour": hour,
             "day": day,
+            "transactions_last_hour": self._transactions_last_hour(history),
+            "amount_last_hour": self._amount_last_hour(history),
+            "new_beneficiary": self._new_beneficiary(history, receiver=None),
+            "device_changed": int(device_changed),
+            "account_age_days": account_age_days if account_age_days is not None else -1,
+            "geo_distance_km": geo_distance_km if geo_distance_km is not None else 0.0,
+            "merchant_category": merchant_category or "UNKNOWN",
+            "device_id_present": int(bool(device_id)),
         }
 
         # Run ML model if loaded
@@ -122,8 +136,12 @@ class FinancialModelService:
         else:
             raise RuntimeError("trained financial inference model unavailable")
 
-        # Risk score and Level
-        risk_score = round(fraud_prob * 100, 2)
+        behavior_probability, behavior_reasons = self._behavior_score(
+            feature_dict, history or [], receiver=None
+        )
+        operational_probability = min(1.0, 0.70 * fraud_prob + 0.30 * behavior_probability)
+        is_fraud = operational_probability >= 0.5
+        risk_score = round(operational_probability * 100, 2)
         if risk_score >= 80:
             risk_level = "CRITICAL"
         elif risk_score >= 60:
@@ -134,11 +152,14 @@ class FinancialModelService:
             risk_level = "LOW"
 
         # Generate explanatory factors
-        reasons = self._generate_explanations(feature_dict, fraud_prob)
+        reasons = self._generate_explanations(feature_dict, operational_probability) + behavior_reasons
 
         return {
             "is_fraud": is_fraud,
             "fraud_probability": fraud_prob,
+            "model_probability": round(fraud_prob, 6),
+            "behavior_probability": round(behavior_probability, 6),
+            "operational_probability": round(operational_probability, 6),
             "risk_score": risk_score,
             "risk_level": risk_level,
             "model_name": self._metadata.get("model_name", "Random Forest (PaySim)"),
@@ -146,6 +167,60 @@ class FinancialModelService:
             "features": {feature: feature_dict[feature] for feature in [*self._features_config.get("categorical_features", []), *self._features_config.get("numerical_features", [])]},
             "reasons": reasons,
             "model_loaded": self._loaded,
+            "decision": "FRAUD" if operational_probability >= 0.5 else ("NEEDS_REVIEW" if operational_probability >= 0.3 or behavior_probability >= 0.5 else "LEGITIMATE"),
+            "behavior_features": {key: feature_dict[key] for key in ("transactions_last_hour", "amount_last_hour", "new_beneficiary", "device_changed", "account_age_days", "geo_distance_km", "merchant_category")},
+        }
+
+    @staticmethod
+    def _transactions_last_hour(history: Optional[list[dict[str, Any]]]) -> int:
+        return sum(1 for item in history or [] if float(item.get("hours_ago", 999)) <= 1)
+
+    @staticmethod
+    def _amount_last_hour(history: Optional[list[dict[str, Any]]]) -> float:
+        return sum(float(item.get("amount", 0)) for item in history or [] if float(item.get("hours_ago", 999)) <= 1)
+
+    @staticmethod
+    def _new_beneficiary(history: Optional[list[dict[str, Any]]], receiver: Optional[str]) -> int:
+        if not receiver:
+            return int(any(bool(item.get("new_beneficiary")) for item in history or []))
+        return int(not any(str(item.get("receiver", "")) == receiver for item in history or []))
+
+    @staticmethod
+    def _behavior_score(feature_dict: dict[str, Any], history: list[dict[str, Any]], receiver: Optional[str]) -> tuple[float, list[str]]:
+        score = 0.0
+        reasons: list[str] = []
+        velocity = int(feature_dict["transactions_last_hour"])
+        amount_velocity = float(feature_dict["amount_last_hour"])
+        if velocity >= 5:
+            score += 0.35
+            reasons.append(f"High transaction velocity: {velocity} transactions in the last hour")
+        elif velocity >= 3:
+            score += 0.18
+        if amount_velocity >= 100000:
+            score += 0.25
+            reasons.append(f"High hourly amount velocity: ₹{amount_velocity:,.2f}")
+        if feature_dict["new_beneficiary"]:
+            score += 0.15
+            reasons.append("New beneficiary pattern detected")
+        if feature_dict["device_changed"]:
+            score += 0.15
+            reasons.append("Device change detected around the transaction")
+        if feature_dict["account_age_days"] >= 0 and feature_dict["account_age_days"] < 30:
+            score += 0.15
+            reasons.append("Account is newly opened")
+        if feature_dict["geo_distance_km"] >= 500:
+            score += 0.15
+            reasons.append("Geographic distance is inconsistent with recent activity")
+        return min(1.0, round(score, 4)), reasons
+
+    def info(self) -> dict[str, Any]:
+        return {
+            "id": "financial-fraud-model",
+            "status": "ACTIVE" if self._loaded else "UNAVAILABLE",
+            "model_loaded": self._loaded,
+            "artifact": "models/financial/financial_model.pkl",
+            "dataset": self._metadata.get("dataset", "PaySim"),
+            "accuracy": self._metadata.get("accuracy"),
         }
 
     @staticmethod

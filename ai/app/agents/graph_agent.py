@@ -1,13 +1,15 @@
 from typing import Any
 from .base_agent import BaseAgent
 from ..services.graph_service import GraphService
+from ..services.graph_persistence import GraphPersistence
 
 
 class GraphAgent(BaseAgent):
     name = "graph-agent"
 
-    def __init__(self, service: GraphService | None = None):
+    def __init__(self, service: GraphService | None = None, persistence: GraphPersistence | None = None):
         self.service = service or GraphService()
+        self.persistence = persistence or GraphPersistence()
 
     async def run(self, state: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -183,6 +185,8 @@ class GraphAgent(BaseAgent):
                     unique_entities.append(e)
 
             graph_data = self.service.analyze(unique_entities, relationships)
+            graph_data["persistence"] = self.persistence.persist(case_id, graph_data)
+            graph_data["gds"] = self.persistence.analytics(case_id) if graph_data["persistence"].get("status") == "persisted" else {"status": "disabled", "error": graph_data["persistence"].get("error")}
             return {
                 "graph": graph_data,
                 "entities": unique_entities,

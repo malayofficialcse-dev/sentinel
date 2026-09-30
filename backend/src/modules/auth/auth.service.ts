@@ -100,7 +100,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthResponse> 
 }
 
 export async function loginUser(input: LoginInput): Promise<AuthResponse> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: { email: input.email.trim().toLowerCase(), organizationId: undefined as any }
   });
 

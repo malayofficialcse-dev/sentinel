@@ -138,10 +138,22 @@ export const AIAgents: React.FC = () => {
                     </span>
                   </div>
                 )}
-                {model.features_count !== undefined && (
+                {(model.features_count !== undefined || model.feature_count !== undefined) && (
                   <div>
                     <span className="text-[#605E5C] block">Features</span>
-                    <span className="font-bold text-[#242424]">{model.features_count}</span>
+                    <span className="font-bold text-[#242424]">{model.features_count ?? model.feature_count}</span>
+                  </div>
+                )}
+                {model.provider && (
+                  <div>
+                    <span className="text-[#605E5C] block">Provider</span>
+                    <span className="font-bold text-[#242424]">{model.provider}</span>
+                  </div>
+                )}
+                {model.version && (
+                  <div>
+                    <span className="text-[#605E5C] block">Version</span>
+                    <span className="font-bold text-[#242424]">{model.version}</span>
                   </div>
                 )}
                 {model.algorithm && (

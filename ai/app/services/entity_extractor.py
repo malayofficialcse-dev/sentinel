@@ -28,11 +28,11 @@ class EntityExtractor:
         ("UPI", re.compile(r"\b[a-zA-Z0-9][\w.\-_]{1,50}@[a-zA-Z][\w.\-_]{1,30}\b")),
         ("VPA", re.compile(r"(?i)(?:vpa|upi\s*id)[\s:#-]*([a-zA-Z0-9@._-]{4,50})")),
         ("BANK_ACCOUNT", re.compile(r"(?i)(?:account|a/c|acct|bank\s*a/c)[\s:#-]*([0-9Xx*]{4,18})")),
-        ("TRANSACTION_ID", re.compile(r"(?i)(?:utr|upi\s*ref(?:erence)?(?:\s*no)?|ref\s*no|txn|transaction|reference|order\s*id)[\s:#-]*([A-Za-z0-9-]{8,35})")),
+        ("TRANSACTION_ID", re.compile(r"(?i)(?:utr|upi\s*ref(?:erence)?(?:\s*no)?|ref\s*no|wallet\s*txn\s*(?:id|no)?|txn\s*(?:id|no)?|transaction|reference|order\s*id)[\s:#-]*([A-Za-z0-9-]{8,35})")),
     )
     _amount = re.compile(r"(?i)(?:₹|rs\.?|inr)\s*([\d,]+(?:\.\d{1,2})?)|(?:credited|debited|amount|amt|paid|received)[\s:.]*(?:₹|rs\.?|inr)?\s*([\d,]+(?:\.\d{1,2})?)|\b([\d,]+(?:\.\d{1,2})?)\s*(?:inr|rupees|rs)\b")
     _date = re.compile(r"\b(?:\d{1,2}[/-]\d{1,2}[/-](?:\d{2}|\d{4})|\d{4}[/-]\d{1,2}[/-]\d{1,2})\b")
-    _name_pattern = re.compile(r"(?i)(?:paid\s+to|transfer\s+to|sent\s+to|to\s*[:\s]+|beneficiary\s*[:\s]+|receiver\s*[:\s]+)([A-Za-z\s.]{3,35})")
+    _name_pattern = re.compile(r"(?i)(?:paid\s+to|transfer\s+to|sent\s+to|to\s*[: ]+|beneficiary\s*[: ]+|receiver\s*[: ]+)([A-Za-z][A-Za-z .]{2,34})")
 
     def extract(self, text: str, source: str = "ocr") -> dict[str, list[dict[str, Any]]]:
         entities: list[dict[str, Any]] = []

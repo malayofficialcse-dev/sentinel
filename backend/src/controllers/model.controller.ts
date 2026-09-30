@@ -10,7 +10,7 @@ export function financial(req: Request, res: Response) { return forward(aiClient
 export function malware(req: Request, res: Response) {
   const file = (req as Request & { file?: Express.Multer.File }).file;
   if (!file) return res.status(400).json({ code: "FILE_REQUIRED", message: "A file is required." });
-  return forward(aiClient.scanMalware({ filename: file.originalname, mime_type: file.mimetype, file_base64: file.buffer.toString("base64") }), res);
+  return forward(aiClient.scanMalware(file), res);
 }
 export function malwareHash(req: Request, res: Response) { return forward(aiClient.scanMalwareHash({ hash: req.body?.hash }), res); }
 export function info(_req: Request, res: Response) { return forward(aiClient.modelsInfo(), res); }

@@ -373,6 +373,21 @@ export async function listEntities(req: Request, res: Response) {
   } catch (error) { return res.status(503).json({ success: false, error: "DATABASE_UNAVAILABLE", message: error instanceof Error ? error.message : "Database unavailable" }); }
 }
 
+export async function listGraph(req: Request, res: Response) {
+  try {
+    const where = req.query.caseId ? { caseId: String(req.query.caseId) } : {};
+    const relationships = await prisma.relationship.findMany({
+      where,
+      include: { source: true, target: true },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    });
+    return res.json(relationships);
+  } catch (error) {
+    return res.status(503).json({ success: false, error: "DATABASE_UNAVAILABLE", message: error instanceof Error ? error.message : "Database unavailable" });
+  }
+}
+
 export async function listTransactions(req: Request, res: Response) {
   try {
     const where: Record<string, any> = {};

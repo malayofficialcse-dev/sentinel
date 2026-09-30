@@ -26,7 +26,7 @@ export async function getUserController(req: Request, res: Response, next: NextF
     const currentUserId = req.user?.id;
     const requestedId = req.params.id;
     if (!currentUserId) return next(new AppError(401, "UNAUTHORIZED", "Authentication required."));
-    const user = await getUserById(currentUserId, requestedId);
+    const user = await getUserById(currentUserId, String(requestedId));
     return res.status(200).json({ success: true, data: user, message: "User retrieved." });
   } catch (error) {
     return next(error instanceof AppError ? error : new AppError(500, "USER_FETCH_FAILED", "Unable to fetch user."));
@@ -60,7 +60,7 @@ export async function updateUserByAdminController(req: Request, res: Response, n
   try {
     const actorId = req.user?.id;
     if (!actorId) return next(new AppError(401, "UNAUTHORIZED", "Authentication required."));
-    const user = await updateUserByAdmin(actorId, req.params.id, req.body);
+    const user = await updateUserByAdmin(actorId, String(req.params.id), req.body);
     return res.status(200).json({ success: true, data: user, message: "User updated." });
   } catch (error) {
     return next(error instanceof AppError ? error : new AppError(500, "USER_UPDATE_FAILED", "Unable to update user."));
@@ -71,7 +71,7 @@ export async function deactivateUserController(req: Request, res: Response, next
   try {
     const actorId = req.user?.id;
     if (!actorId) return next(new AppError(401, "UNAUTHORIZED", "Authentication required."));
-    const user = await deactivateUser(actorId, req.params.id);
+    const user = await deactivateUser(actorId, String(req.params.id));
     return res.status(200).json({ success: true, data: user, message: "User deactivated." });
   } catch (error) {
     return next(error instanceof AppError ? error : new AppError(500, "USER_DEACTIVATION_FAILED", "Unable to deactivate user."));
@@ -82,7 +82,7 @@ export async function deleteUserController(req: Request, res: Response, next: Ne
   try {
     const actorId = req.user?.id;
     if (!actorId) return next(new AppError(401, "UNAUTHORIZED", "Authentication required."));
-    const result = await deleteUser(actorId, req.params.id);
+    const result = await deleteUser(actorId, String(req.params.id));
     return res.status(200).json({ success: true, data: result, message: "User deactivated successfully." });
   } catch (error) {
     return next(error instanceof AppError ? error : new AppError(500, "USER_DELETE_FAILED", "Unable to delete user."));

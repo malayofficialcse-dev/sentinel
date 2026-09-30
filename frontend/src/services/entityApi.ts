@@ -2,6 +2,11 @@ import { apiClient } from './api';
 import { Entity } from '../types';
 
 export const entityApi = {
+  async getRelationships(caseId?: string): Promise<any[]> {
+    const res = await apiClient.get('/graph', caseId ? { params: { caseId } } : undefined);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+
   async getEntities(filters?: { type?: string; search?: string; caseId?: string }): Promise<Entity[]> {
     const params: Record<string, string> = {};
     if (filters?.type) params.type = filters.type;

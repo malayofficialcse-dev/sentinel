@@ -94,6 +94,7 @@ class OCRService:
         self,
         file_bytes: bytes
     ) -> OCRResult:
+        warnings: list[str] = []
         image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
         np_img = np.array(image)
 
@@ -125,11 +126,15 @@ class OCRService:
 
         raw_text = "\n".join(text_lines)
         normalized = self._normalize_text(raw_text)
+        if not normalized:
+            warnings.append(
+                "No text could be extracted from the image. Improve image resolution or install a compatible OCR engine."
+            )
 
         return OCRResult(
             text=normalized,
             qr_codes=qr_codes,
-            warnings=[],
+            warnings=warnings,
             page_count=1
         )
 

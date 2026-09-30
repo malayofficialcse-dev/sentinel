@@ -26,6 +26,13 @@ export interface ExtractionResponse {
 
 export class AIClient {
 
+  private async assertSuccessful(response: Response): Promise<void> {
+    if (response.ok) return;
+    const detail = await response.text().catch(() => "");
+    const suffix = detail ? `: ${detail.slice(0, 500)}` : "";
+    throw new Error(`AI service failed with HTTP ${response.status}${suffix}`);
+  }
+
   private async request<T>(
     endpoint: string,
     body: unknown,
@@ -46,11 +53,7 @@ export class AIClient {
       }
     );
 
-    if (!response.ok) {
-      throw new Error(
-        `AI service failed: ${response.status}`
-      );
-    }
+    await this.assertSuccessful(response);
 
     return response.json() as Promise<T>;
   }
@@ -109,9 +112,24 @@ export class AIClient {
     return this.request("/api/pipeline/run", payload);
   }
 
+  async askInvestigator(payload: unknown) {
+    return this.request("/api/assistant/query", payload);
+  }
+
   async predictPhishing(payload: unknown) { return this.request("/api/models/phishing/predict", payload); }
   async predictFinancial(payload: unknown) { return this.request("/api/models/financial/predict", payload); }
-  async scanMalware(payload: unknown) { return this.request("/api/models/malware/scan", payload); }
+  async scanMalware(file: Express.Multer.File) {
+    const form = new FormData();
+    const bytes = new Uint8Array(file.buffer);
+    form.append("file", new Blob([bytes.buffer as ArrayBuffer], { type: file.mimetype }), file.originalname);
+    const response = await fetch(`${AI_CONFIG.baseURL}/api/models/malware/scan`, {
+      method: "POST",
+      body: form,
+      signal: AbortSignal.timeout(AI_CONFIG.timeout)
+    });
+    await this.assertSuccessful(response);
+    return response.json();
+  }
   async scanMalwareHash(payload: unknown) { return this.request("/api/models/malware/hash", payload); }
   async modelsInfo() { return this.request("/api/models/info", undefined, "GET"); }
 
@@ -125,7 +143,7 @@ export class AIClient {
       body: form,
       signal: AbortSignal.timeout(AI_CONFIG.timeout)
     });
-    if (!response.ok) throw new Error(`AI service failed: ${response.status}`);
+    await this.assertSuccessful(response);
     return response.json();
   }
 

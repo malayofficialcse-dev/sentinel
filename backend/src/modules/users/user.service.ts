@@ -69,7 +69,7 @@ export async function getUserById(currentUserId: string, requestedId: string) {
 
   if (isSelf) return sanitizeUser(targetUser);
   if (currentUser.role === RoleName.SUPER_ADMIN) return sanitizeUser(targetUser);
-  if (sameOrg && [RoleName.HEAD, RoleName.INVESTIGATOR, RoleName.ANALYST, RoleName.REPORTER].includes(currentUser.role)) return sanitizeUser(targetUser);
+  if (sameOrg && ([RoleName.HEAD, RoleName.INVESTIGATOR, RoleName.ANALYST, RoleName.REPORTER] as RoleName[]).includes(currentUser.role)) return sanitizeUser(targetUser);
 
   throw new AppError(403, "FORBIDDEN", "You do not have permission to access this user.");
 }

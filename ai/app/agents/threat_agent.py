@@ -21,12 +21,17 @@ class ThreatAgent(BaseAgent):
                         "value": result.get("url", entity.get("value")),
                         "source": "phishing-model",
                         "confidence": result.get("phishing_probability", 0.0),
-                        "model": "url_model1.pkl",
+                        "model": "calibrated-url-ensemble",
                         "probability": result.get("phishing_probability", 0.0),
+                        "decision": result.get("decision"),
+                        "out_of_distribution": result.get("out_of_distribution", False),
+                        "model_probability": result.get("model_probability"),
+                        "evidence_risk": result.get("evidence_risk"),
+                        "operational_risk": result.get("operational_risk"),
                         "features": result.get("features", {}),
                     })
                     for indicator in result.get("indicators", []):
-                        indicator.update({"source": "phishing-model", "model": "url_model1.pkl", "probability": result.get("phishing_probability")})
+                        indicator.update({"source": "phishing-model", "model": "calibrated-url-ensemble", "probability": result.get("phishing_probability"), "decision": result.get("decision")})
                         results.append(indicator)
                 except Exception as exc:
                     warnings.append(f"Phishing model unavailable for {entity.get('value')}: {exc}")

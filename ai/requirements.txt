@@ -105,3 +105,15 @@ wcwidth==0.8.2
 webcolors==25.10.0
 webencodings==0.5.1
 websocket-client==1.9.0
+xgboost==3.2.0
+lief==1.0.0
+rapidocr_onnxruntime==1.4.4
+# Runtime API dependencies (kept explicit for clean container installs)
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+pydantic>=2.8,<3
+pydantic-settings>=2.4,<3
+python-multipart>=0.0.9,<1
+# Optional provider SDK; ProviderRouter also supports REST/OpenAI and safe fallback
+google-generativeai>=0.8,<1
+neo4j>=5.20,<6

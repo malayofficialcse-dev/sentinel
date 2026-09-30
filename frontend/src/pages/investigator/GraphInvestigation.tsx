@@ -17,11 +17,13 @@ export const GraphInvestigation: React.FC = () => {
     Promise.all([
       caseApi.getCases(),
       entityApi.getEntities(),
+      entityApi.getRelationships(),
     ])
-      .then(([fetchedCases, fetchedEntities]) => {
+      .then(([fetchedCases, fetchedEntities, fetchedRelationships]) => {
         if (!mounted) return;
         setCases(fetchedCases);
         setEntities(fetchedEntities);
+        setRelationships(fetchedRelationships);
         if (fetchedEntities.length > 0) {
           setSelectedEntity(fetchedEntities[0]);
         }
@@ -37,8 +39,9 @@ export const GraphInvestigation: React.FC = () => {
     try {
       if (caseId === 'ALL') {
         const ents = await entityApi.getEntities();
+        const rels = await entityApi.getRelationships();
         setEntities(ents);
-        setRelationships([]);
+        setRelationships(rels);
         if (ents.length > 0) setSelectedEntity(ents[0]);
       } else {
         const caseData = await caseApi.getCaseData(caseId);
@@ -57,7 +60,7 @@ export const GraphInvestigation: React.FC = () => {
             relatedEntityIds: [],
           }));
           setEntities(ents);
-          setRelationships(caseData.relationships || []);
+          setRelationships(caseData.relationships || await entityApi.getRelationships(caseId));
           if (ents.length > 0) setSelectedEntity(ents[0]);
           else setSelectedEntity(null);
         }

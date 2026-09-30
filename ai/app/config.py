@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "gemini"
     LLM_API_KEY: str = ""
     LLM_MODEL: str = ""
+    OPENAI_API_KEY: str = ""
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    EVIDENCE_MODEL: str = ""
+    REASONING_MODEL: str = ""
+    EMBEDDING_MODEL: str = ""
 
     # PostgreSQL
     POSTGRES_HOST: str = "localhost"

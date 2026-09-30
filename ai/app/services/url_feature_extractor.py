@@ -9,8 +9,15 @@ using 22 structural features extracted by extract_url_features().
 """
 
 import asyncio
+import json
+import math
+import os
 import re
 import ipaddress
+import socket
+import ssl
+from datetime import datetime, timezone
+from urllib.request import Request, urlopen
 from urllib.parse import urlparse
 
 
@@ -88,6 +95,11 @@ def extract_url_features(url: str) -> dict:
     ]
     url_lower = original_url.lower()
     suspicious_word_count = sum(w in url_lower for w in suspicious_words)
+    suspicious_tlds = (".xyz", ".top", ".click", ".gq", ".tk", ".ml", ".ga", ".cf", ".zip", ".mov")
+    suspicious_tld = int(any(hostname.lower().endswith(tld) for tld in suspicious_tlds))
+    host_labels = [label for label in hostname.lower().split(".") if label]
+    longest_label = max((len(label) for label in host_labels), default=0)
+    randomized_host = int(domain_digits >= 3 and domain_letters >= 6 or longest_label >= 24)
 
     has_at = int("@" in original_url)
     hyphen_count = original_url.count("-")
@@ -116,6 +128,8 @@ def extract_url_features(url: str) -> dict:
         "DotCount": dot_count,
         "QueryLength": len(query),
         "FragmentLength": len(fragment),
+        "SuspiciousTLD": suspicious_tld,
+        "RandomizedHost": randomized_host,
     }
 
 
@@ -152,6 +166,10 @@ def _generate_reasons(features: dict) -> list[str]:
         reasons.append("URL shortening service detected")
     if features.get("SuspiciousWordCount", 0) > 0:
         reasons.append("Security-sensitive keywords detected in URL")
+    if features.get("SuspiciousTLD") == 1:
+        reasons.append("Domain uses a TLD frequently associated with abusive registrations")
+    if features.get("RandomizedHost") == 1:
+        reasons.append("Hostname has a high-entropy or randomly generated pattern")
     if not reasons:
         reasons.append("No obvious URL-level phishing indicators detected")
     return reasons
@@ -180,6 +198,33 @@ class URLService:
         self._model = None
         self._model_features: list[str] = []
         self._model_loaded = False
+        self._char_model = None
+        self._ood_stats: dict = {}
+
+    def info(self) -> dict:
+        result = self._run_model_sync("https://example.com", extract_url_features("https://example.com"))
+        model_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "models", "phishing")
+        metrics = {}
+        metrics_path = os.path.join(model_dir, "runtime_metrics.json")
+        if os.path.exists(metrics_path):
+            with open(metrics_path, encoding="utf-8") as file:
+                metrics = json.load(file)
+        return {
+            "id": "phishing-url-model",
+            "status": "ACTIVE" if result.get("model_available") else "UNAVAILABLE",
+            "model_available": result.get("model_available", False),
+            "feature_count": len(self._model_features),
+            "artifact": "models/phishing/url_model1.pkl",
+            "dataset": "PhiUSIIL",
+            "label_mapping": {"0": "legitimate", "1": "phishing"},
+            "accuracy": metrics.get("accuracy"),
+            "precision": metrics.get("precision"),
+            "recall": metrics.get("recall"),
+            "f1_score": metrics.get("f1"),
+            "brier_score": metrics.get("brier_score"),
+            "expected_calibration_error": metrics.get("expected_calibration_error"),
+            "ensemble": metrics.get("ensemble"),
+        }
 
     # ─────────────────────────────────────────────────────
     # Public interface
@@ -210,18 +255,39 @@ class URLService:
             url if "://" in url else "http://" + url
         )
         domain = parsed.hostname or url
+        enrichment = await self._enrich_url(url, parsed)
+        features.update(enrichment["features"])
 
-        # Try ML model
+        # Prefer the trained model, but keep URL analysis available when optional
+        # ML dependencies or the serialized artifact are unavailable.
         model_result = await self._run_model(url, features)
+        heuristic_probability, _ = self._heuristic_score(features)
 
-        if model_result["model_available"]:
+        if self._is_local_or_private_host(parsed.hostname or ""):
+            is_phishing = False
+            prob = 0.0
+            reasons = ["Local or private host is excluded from public phishing classification"]
+        elif model_result["model_available"]:
             is_phishing = model_result["is_phishing"]
-            prob = model_result["phishing_probability"]
+            prob = model_result["operational_probability"]
+            if heuristic_probability == 0.0:
+                prob = min(prob, 0.20)
         else:
-            raise RuntimeError("trained phishing inference model unavailable")
+            prob = heuristic_probability
+            is_phishing = prob >= 0.5
 
         risk = _calculate_risk(prob)
-        reasons = _generate_reasons(features)
+        if "reasons" not in locals():
+            reasons = _generate_reasons(features)
+        reasons.extend(enrichment["reasons"])
+        capped_without_evidence = (
+            model_result["model_available"]
+            and heuristic_probability == 0.0
+            and not self._is_local_or_private_host(parsed.hostname or "")
+        )
+        if capped_without_evidence:
+            reasons.append("Model confidence was capped because no independent URL phishing indicators were found")
+            is_phishing = prob >= 0.5
 
         # Build indicator list
         indicators = []
@@ -236,8 +302,9 @@ class URLService:
                     f"with {prob * 100:.1f}% confidence."
                 )
             })
-        for reason in reasons:
-            if "No obvious" not in reason:
+        indicator_reasons = [] if self._is_local_or_private_host(parsed.hostname or "") else reasons
+        for reason in indicator_reasons:
+            if "No obvious" not in reason and "Model confidence was capped" not in reason:
                 indicators.append({
                     "type": "SUSPICIOUS_DOMAIN",
                     "value": domain,
@@ -251,12 +318,80 @@ class URLService:
             "domain": domain,
             "is_phishing": is_phishing,
             "phishing_probability": round(prob, 4),
+            "model_probability": round(model_result.get("model_probability", prob), 4),
+            "evidence_risk": round(heuristic_probability, 4),
+            "operational_risk": risk,
+            "decision": "NEEDS_REVIEW" if model_result.get("ood") or capped_without_evidence or risk["level"] == "MEDIUM" else ("PHISHING" if is_phishing else "LEGITIMATE"),
+            "confidence": round(model_result.get("confidence", 0.5), 4),
+            "out_of_distribution": model_result.get("ood", False),
+            "enrichment": enrichment["metadata"],
             "risk": risk,
             "reasons": reasons,
             "features": features,
             "indicators": indicators,
             "model_available": model_result["model_available"]
         }
+
+    async def _enrich_url(self, url: str, parsed) -> dict:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._enrich_url_sync, url, parsed)
+
+    @staticmethod
+    def _enrich_url_sync(url: str, parsed) -> dict:
+        hostname = parsed.hostname or ""
+        features: dict[str, int | float] = {
+            "DNSResolves": 0,
+            "TLSValid": 0,
+            "RedirectCount": 0,
+            "HasLoginForm": 0,
+            "HasPasswordField": 0,
+            "UsesPunycode": int("xn--" in hostname.lower()),
+            "HomoglyphRisk": int(any(ord(char) > 127 for char in hostname)),
+            "TLDReputation": 0.5,
+        }
+        reasons: list[str] = []
+        metadata: dict[str, object] = {"dns": None, "tls": None, "redirects": None, "html": "not_requested"}
+        if not hostname or URLService._is_local_or_private_host(hostname):
+            return {"features": features, "reasons": reasons, "metadata": metadata}
+        try:
+            socket.gethostbyname(hostname)
+            features["DNSResolves"] = 1
+            metadata["dns"] = "resolves"
+        except (OSError, ValueError):
+            reasons.append("Domain does not currently resolve in DNS")
+            metadata["dns"] = "unresolved"
+        if parsed.scheme.lower() == "https":
+            try:
+                context = ssl.create_default_context()
+                with socket.create_connection((hostname, 443), timeout=2) as raw:
+                    with context.wrap_socket(raw, server_hostname=hostname) as secure:
+                        certificate = secure.getpeercert()
+                expires = datetime.strptime(certificate["notAfter"], "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
+                features["TLSValid"] = int(expires > datetime.now(timezone.utc))
+                metadata["tls"] = {"valid": bool(features["TLSValid"]), "days_remaining": max(0, (expires - datetime.now(timezone.utc)).days)}
+            except (OSError, ssl.SSLError, KeyError, ValueError):
+                reasons.append("HTTPS certificate could not be validated")
+                metadata["tls"] = "unverified"
+        if hostname.lower().endswith((".xyz", ".top", ".click", ".tk", ".ml", ".ga", ".cf", ".zip")):
+            features["TLDReputation"] = 0.15
+            reasons.append("TLD has elevated abuse prevalence")
+        if features["UsesPunycode"] or features["HomoglyphRisk"]:
+            features["HomoglyphRisk"] = 1
+            reasons.append("Internationalized or homoglyph hostname requires review")
+        if os.getenv("SENTINEL_URL_HTML_ENRICHMENT", "0") == "1":
+            try:
+                request = Request(url if parsed.scheme else f"http://{url}", headers={"User-Agent": "SentinelURLScanner/1.0"})
+                with urlopen(request, timeout=3) as response:
+                    html = response.read(512_000).decode("utf-8", errors="ignore").lower()
+                    features["RedirectCount"] = len(response.geturl().split("/")[-1]) != len(parsed.path)
+                    features["HasLoginForm"] = int("<form" in html and any(word in html for word in ("login", "signin", "password")))
+                    features["HasPasswordField"] = int("type=\"password\"" in html or "type='password'" in html)
+                    metadata["html"] = "scanned"
+                    if features["HasPasswordField"]:
+                        reasons.append("Page contains a password input")
+            except Exception:
+                metadata["html"] = "unavailable"
+        return {"features": features, "reasons": reasons, "metadata": metadata}
 
     # ─────────────────────────────────────────────────────
     # ML model runner
@@ -289,7 +424,8 @@ class URLService:
             # url_model.pkl requires a separate 50-feature webpage extractor that
             # is not present in this production service. Use the saved compatible
             # 22-feature model rather than padding inputs with fabricated zeros.
-            model_path = os.path.join(model_dir, "url_model1.pkl")
+            calibrated_path = os.path.join(model_dir, "calibrated_structural_model.pkl")
+            model_path = calibrated_path if os.path.exists(calibrated_path) else os.path.join(model_dir, "url_model1.pkl")
             features_path = os.path.join(model_dir, "url_features1.json")
 
             if not os.path.exists(model_path):
@@ -299,6 +435,13 @@ class URLService:
                 self._model = joblib.load(model_path)
                 with open(features_path) as f:
                     self._model_features = json.load(f)
+                char_path = os.path.join(model_dir, "url_char_model.pkl")
+                if os.path.exists(char_path):
+                    self._char_model = joblib.load(char_path)
+                ood_path = os.path.join(model_dir, "url_ood_stats.json")
+                if os.path.exists(ood_path):
+                    with open(ood_path, encoding="utf-8") as f:
+                        self._ood_stats = json.load(f)
 
             missing_features = [feature for feature in self._model_features if feature not in features]
             if missing_features:
@@ -316,19 +459,43 @@ class URLService:
             probabilities = self._model.predict_proba(X)[0]
             classes = list(self._model.classes_)
 
+            # The runtime artifact normalizes the source label into phishing=1.
             if 1 in classes:
                 phishing_prob = float(probabilities[classes.index(1)])
             else:
                 phishing_prob = float(prediction)
 
+            structural_probability = phishing_prob
+            char_probability = structural_probability
+            if self._char_model:
+                char_probability = float(self._char_model["model"].predict_proba(self._char_model["vectorizer"].transform([url]))[0][1])
+            ensemble_probability = 0.65 * structural_probability + 0.35 * char_probability
+            ood = self._is_ood(features)
+            operational_probability = min(ensemble_probability, 0.35) if ood and not features.get("SuspiciousWordCount") else ensemble_probability
+            confidence = max(0.05, min(0.99, 1.0 - abs(ensemble_probability - 0.5) * 2))
             return {
                 "model_available": True,
-                "is_phishing": bool(prediction == 1),
-                "phishing_probability": phishing_prob
+                "is_phishing": bool(ensemble_probability >= 0.5),
+                "phishing_probability": ensemble_probability,
+                "model_probability": ensemble_probability,
+                "operational_probability": operational_probability,
+                "confidence": confidence,
+                "ood": ood,
             }
 
         except Exception:
-            return {"model_available": False, "is_phishing": False, "phishing_probability": 0.0}
+            return {"model_available": False, "is_phishing": False, "phishing_probability": 0.0, "operational_probability": 0.0, "ood": True}
+
+    def _is_ood(self, features: dict) -> bool:
+        if not self._ood_stats:
+            return False
+        extreme = 0
+        for name, stats in self._ood_stats.items():
+            value = float(features.get(name, 0))
+            spread = max(float(stats.get("std", 1)), 1e-6)
+            if value < float(stats.get("min", value)) - 3 * spread or value > float(stats.get("max", value)) + 3 * spread:
+                extreme += 1
+        return extreme >= 2
 
     # ─────────────────────────────────────────────────────
     # Heuristic fallback (no model)
@@ -353,5 +520,20 @@ class URLService:
             score += 0.10
         if features.get("SuspiciousWordCount", 0) > 0:
             score += features["SuspiciousWordCount"] * 0.05
+        if features.get("SuspiciousTLD"):
+            score += 0.25
+        if features.get("RandomizedHost"):
+            score += 0.25
         score = min(score, 1.0)
         return round(score, 4), score >= 0.4
+
+    @staticmethod
+    def _is_local_or_private_host(hostname: str) -> bool:
+        normalized = hostname.lower().strip(".")
+        if normalized in {"localhost", "localhost.localdomain"} or normalized.endswith(".local"):
+            return True
+        try:
+            address = ipaddress.ip_address(normalized)
+            return address.is_private or address.is_loopback or address.is_reserved
+        except ValueError:
+            return False

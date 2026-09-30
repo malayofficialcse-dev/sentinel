@@ -106,6 +106,7 @@ export const PhishingModelPage: React.FC = () => {
                     <RiskBadge risk={result.risk.level} size="md" />
                   </div>
                   <p className="text-[13px] text-[#605E5C] font-mono mt-1 break-all">{result.url}</p>
+                  {result.decision === 'NEEDS_REVIEW' && <p className="text-[12px] text-[#CA5010] font-semibold mt-2">Needs analyst review: model confidence is limited for this URL.</p>}
                 </div>
               </div>
 
@@ -152,7 +153,7 @@ export const PhishingModelPage: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-[15px] font-bold text-[#242424]">Extracted ML Feature Vector</h3>
-                  <p className="text-[12px] text-[#605E5C]">22 numerical attributes parsed from the URL string</p>
+                  <p className="text-[12px] text-[#605E5C]">Numerical attributes parsed from the URL string</p>
                 </div>
                 <span className="text-[11px] font-mono bg-[#F3F2F1] px-2 py-1 rounded-[4px] text-[#605E5C]">
                   {Object.keys(result.features).length} Features Extracted

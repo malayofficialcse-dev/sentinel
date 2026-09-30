@@ -257,6 +257,7 @@ export const FinancialModelPage: React.FC = () => {
                     </h3>
                     <RiskBadge risk={result.risk_level} size="md" />
                   </div>
+                  {result.decision === 'NEEDS_REVIEW' && <p className="text-[12px] text-[#CA5010] font-semibold mt-2">Needs analyst review: behavioral context increased uncertainty.</p>}
                   <p className="text-[13px] text-[#605E5C] mt-1">
                     {result.is_fraud
                       ? 'High probability of money mule cash-out or account takeover drainage.'
