@@ -1,8 +1,18 @@
-# Sentinel investigation backend
+# Sentinel Backend
 
-The versioned API is available under `/api/v1`. Local development uses the existing file-backed fallback store; the Prisma schema and Docker stack provide PostgreSQL persistence and Neo4j for deployment.
+The backend is Sentinel's Node.js and TypeScript API. It provides versioned
+HTTP endpoints under `/api/v1`, validates incoming data, manages application
+records with Prisma, and connects to the AI, Redis, and Neo4j services.
 
-## Setup
+## Run the complete stack
+
+From the repository root, follow the [Docker setup](../README.md#docker).
+Compose starts the backend with its required services and applies Prisma
+migrations when the API container starts.
+
+## Local development
+
+From this directory:
 
 ```powershell
 Copy-Item .env.example .env
@@ -12,23 +22,25 @@ npm.cmd run prisma:validate
 npm.cmd run dev
 ```
 
-Full dependency stack:
+The `.env` values must point to services reachable from the backend. When
+running it on the host alongside Docker datastores, use `localhost` and the
+published ports. Inside Compose, use service names such as `postgres`, `redis`,
+`neo4j`, and `ai`.
+
+## Useful scripts
 
 ```powershell
-docker compose up --build
-npm.cmd run prisma:deploy
-npm.cmd run seed
+npm.cmd run check
+npm.cmd test
+npm.cmd run build
 ```
 
-Development seed credentials are `admin@sentinel.local` / `ChangeMe123!`; override them with `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`.
+The API health endpoint is `/health`. Authentication, cases, evidence,
+integrity, reporting, and analysis routes are mounted under `/api/v1`.
 
-## Investigation flow
+## Container image
 
-1. Register or login at `/api/v1/auth/register` or `/api/v1/auth/login`.
-2. Send the returned JWT as `Authorization: Bearer <token>`.
-3. Create a case with `POST /api/v1/cases`.
-4. Upload multipart evidence to `POST /api/v1/evidence`, or submit structured input to `POST /api/v1/evidence/manual`.
-5. Verify provenance with `POST /api/v1/integrity/:evidenceId/verify`.
-6. Query graph context and generate a report with `POST /api/v1/reports/:caseId/generate`.
-
-Health probes are available at `/health`, `/api/v1/health/db`, `/api/v1/health/neo4j`, and `/api/v1/health/ai`.
+The production image and pull instructions are documented at
+[Sentinel Backend on Docker Hub](https://hub.docker.com/r/malaymaity/sentinel-backend).
+Runtime secrets and connection strings are passed as environment variables;
+never put them in the image.
